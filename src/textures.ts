@@ -140,8 +140,45 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.NETHERRACK, paintTexture(BLOCKS[BlockType.NETHERRACK].color, 21, { grain: 26 }), false);
   makeMat(BlockType.MUSHROOM_STEM, paintTexture(BLOCKS[BlockType.MUSHROOM_STEM].color, 22, { grain: 8 }), false);
   makeMat(BlockType.MUSHROOM_CAP, paintMushroomCap(), false);
+  makeMat(BlockType.FIRE, paintFire(), true, 1);
 
   return materials;
+}
+
+/** Overlapping jagged orange/yellow flame licks on an otherwise transparent canvas, for cross-billboard fire. */
+function paintFire(): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = TEXTURE_SIZE;
+  canvas.height = TEXTURE_SIZE;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "rgb(214, 84, 20)";
+  ctx.beginPath();
+  ctx.moveTo(3, 16);
+  ctx.lineTo(2, 9);
+  ctx.lineTo(5, 5);
+  ctx.lineTo(4, 10);
+  ctx.lineTo(8, 1);
+  ctx.lineTo(7, 8);
+  ctx.lineTo(11, 4);
+  ctx.lineTo(9, 10);
+  ctx.lineTo(13, 7);
+  ctx.lineTo(11, 16);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "rgb(250, 190, 60)";
+  ctx.beginPath();
+  ctx.moveTo(5, 16);
+  ctx.lineTo(5, 11);
+  ctx.lineTo(7, 7);
+  ctx.lineTo(7, 12);
+  ctx.lineTo(9, 8);
+  ctx.lineTo(8, 16);
+  ctx.closePath();
+  ctx.fill();
+
+  return canvas;
 }
 
 function paintMushroomCap(): HTMLCanvasElement {

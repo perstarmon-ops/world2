@@ -232,6 +232,7 @@ export class World {
     const detail2D = createNoise2D(mulberry32(this.seed + 1));
     const spikeRand = mulberry32(this.seed + 2);
     const mushroomRand = mulberry32(this.seed + 3);
+    const fireRand = mulberry32(this.seed + 4);
     const baseHeight = 14;
 
     for (let x = 0; x < this.sizeX; x++) {
@@ -273,6 +274,20 @@ export class World {
         if (x < 4 || x >= this.sizeX - 4 || z < 4 || z >= this.sizeZ - 4) continue;
         const groundY = this.heightAt(x, z);
         this.buildGiantMushroom(x, groundY, z, mushroomRand);
+      }
+    }
+
+    // Scatter patches of fire across the ground for atmosphere.
+    const fireSpacing = 6;
+    for (let cx = 1; cx < this.sizeX - 1; cx += fireSpacing) {
+      for (let cz = 1; cz < this.sizeZ - 1; cz += fireSpacing) {
+        if (fireRand() > 0.3) continue;
+        const x = cx + Math.floor(fireRand() * fireSpacing);
+        const z = cz + Math.floor(fireRand() * fireSpacing);
+        if (!this.inBounds(x, 0, z)) continue;
+        const groundY = this.heightAt(x, z);
+        if (this.getBlock(x, groundY, z) !== BlockType.AIR) continue;
+        this.setBlock(x, groundY, z, BlockType.FIRE);
       }
     }
 

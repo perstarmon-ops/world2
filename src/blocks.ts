@@ -26,6 +26,7 @@ export enum BlockType {
   NETHERRACK = 24,
   MUSHROOM_STEM = 25,
   MUSHROOM_CAP = 26,
+  FIRE = 27,
 }
 
 export interface BlockInfo {
@@ -72,4 +73,5 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.NETHERRACK]: { name: "Netherrack", color: [111, 46, 40], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.9 },
   [BlockType.MUSHROOM_STEM]: { name: "Mushroom Stem", color: [223, 214, 190], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.MUSHROOM_CAP]: { name: "Red Mushroom Cap", color: [178, 32, 32], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
+  [BlockType.FIRE]: { name: "Fire", color: [230, 120, 30], solid: false, transparent: true, placeable: true, breakable: true, hardness: 0.1, renderAsCross: true },
 };
