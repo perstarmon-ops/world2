@@ -12,6 +12,8 @@ const PLAYER_HEIGHT = 1.8;
 const EYE_HEIGHT = 1.62;
 const MAX_STEP = 0.05;
 const STEP_HEIGHT = 1.02;
+const LAND_STEP_BLOCKS = 1;
+const WATER_CLIMB_BLOCKS = 3;
 
 const WATER_GRAVITY_SCALE = 0.25;
 const WATER_TERMINAL_VELOCITY = 3.5;
@@ -82,23 +84,27 @@ export class Player {
   }
 
   /**
-   * If moving by (dx, dz) is blocked at the current height but a ledge one
-   * block up is clear, lift the player onto it. Lets walking up a 1-block
-   * step, or swimming up to a shoreline, carry straight through instead of
-   * stopping dead against the block.
+   * If moving by (dx, dz) is blocked at the current height but a ledge up to
+   * `maxBlocks` higher is clear, lift the player onto it. On land this only
+   * clears a single block (normal walking); in water it clears up to
+   * WATER_CLIMB_BLOCKS so swimming up to a shoreline and pushing forward
+   * hauls the player out instead of leaving them stuck against the bank.
    */
-  private tryStepUp(dx: number, dz: number): void {
+  private tryStepUp(dx: number, dz: number, maxBlocks: number): void {
     if (dx === 0 && dz === 0) return;
     const nextX = this.position.x + dx;
     const nextZ = this.position.z + dz;
     if (!this.aabbCollides(nextX, this.position.y, nextZ)) return;
 
-    const raisedY = this.position.y + STEP_HEIGHT;
-    if (this.aabbCollides(this.position.x, raisedY, this.position.z)) return;
-    if (this.aabbCollides(nextX, raisedY, nextZ)) return;
-
-    this.position.y = raisedY;
-    if (this.velocity.y < 0) this.velocity.y = 0;
+    for (let n = 1; n <= maxBlocks; n++) {
+      const raisedY = this.position.y + n * STEP_HEIGHT;
+      if (this.aabbCollides(this.position.x, raisedY, this.position.z)) return;
+      if (!this.aabbCollides(nextX, raisedY, nextZ)) {
+        this.position.y = raisedY;
+        if (this.velocity.y < 0) this.velocity.y = 0;
+        return;
+      }
+    }
   }
 
   private forwardVector(): THREE.Vector3 {
@@ -165,8 +171,9 @@ export class Player {
     const wasGrounded = this.grounded;
     this.grounded = false;
     if (wasGrounded || inWater) {
-      this.tryStepUp(moveDir.x, 0);
-      this.tryStepUp(0, moveDir.z);
+      const climbBlocks = inWater ? WATER_CLIMB_BLOCKS : LAND_STEP_BLOCKS;
+      this.tryStepUp(moveDir.x, 0, climbBlocks);
+      this.tryStepUp(0, moveDir.z, climbBlocks);
     }
     this.moveAxis("x", moveDir.x);
     this.moveAxis("z", moveDir.z);
