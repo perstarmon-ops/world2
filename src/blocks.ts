@@ -21,6 +21,9 @@ export enum BlockType {
   PATH = 19,
   DOOR_CLOSED = 20,
   DOOR_OPEN = 21,
+  OBSIDIAN = 22,
+  PORTAL = 23,
+  NETHERRACK = 24,
 }
 
 export interface BlockInfo {
@@ -62,4 +65,7 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.PATH]: { name: "Path", color: [176, 150, 105], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.4 },
   [BlockType.DOOR_CLOSED]: { name: "Door", color: [140, 104, 66], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.6 },
   [BlockType.DOOR_OPEN]: { name: "Door (Open)", color: [140, 104, 66], solid: false, transparent: true, placeable: false, breakable: true, hardness: 0.6 },
+  [BlockType.OBSIDIAN]: { name: "Obsidian", color: [38, 20, 54], solid: true, transparent: false, placeable: true, breakable: true, hardness: 3.0 },
+  [BlockType.PORTAL]: { name: "Portal", color: [160, 62, 224], solid: false, transparent: true, placeable: false, breakable: false, hardness: 0 },
+  [BlockType.NETHERRACK]: { name: "Netherrack", color: [111, 46, 40], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.9 },
 };

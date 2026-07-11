@@ -59,6 +59,13 @@ export class AnimalManager {
     return this.mobs;
   }
 
+  /** Hides/shows this dimension's mobs, for switching between dimensions sharing one scene. */
+  setActive(active: boolean): void {
+    for (const mob of this.mobs) {
+      mob.group.visible = active;
+    }
+  }
+
   update(dt: number, playerPosition: THREE.Vector3, daylight: number): void {
     for (const mob of this.mobs) {
       mob.update(dt, this.world, playerPosition);

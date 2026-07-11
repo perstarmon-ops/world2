@@ -245,4 +245,11 @@ export class ChunkMesher {
       this.rebuildChunk(tx, tz);
     }
   }
+
+  /** Shows/hides every chunk mesh, for switching between dimensions sharing one scene. */
+  setVisible(visible: boolean): void {
+    for (const group of this.chunkGroups.values()) {
+      group.visible = visible;
+    }
+  }
 }

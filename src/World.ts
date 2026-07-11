@@ -30,6 +30,8 @@ export function chunkKey(cx: number, cz: number): ChunkKey {
   return `${cx},${cz}`;
 }
 
+export type WorldTheme = "overworld" | "nether";
+
 /**
  * Flat voxel storage for the whole (finite) world plus terrain generation.
  * Rendering is handled separately by ChunkMesher, which reads block data
@@ -42,12 +44,20 @@ export class World {
   private blocks: Uint8Array;
   private heightmap: Int16Array;
   private readonly seed: number;
+  private readonly theme: WorldTheme;
+  private portalPosition: [number, number, number] | null = null;
 
-  constructor(seed = 1337) {
+  constructor(seed = 1337, theme: WorldTheme = "overworld") {
     this.seed = seed;
+    this.theme = theme;
     this.blocks = new Uint8Array(this.sizeX * this.height * this.sizeZ);
     this.heightmap = new Int16Array(this.sizeX * this.sizeZ);
     this.generate();
+  }
+
+  /** World-space coordinates of the standing tile inside this world's portal, if one was built. */
+  getPortalPosition(): [number, number, number] | null {
+    return this.portalPosition;
   }
 
   private index(x: number, y: number, z: number): number {
@@ -114,6 +124,14 @@ export class World {
   }
 
   private generate(): void {
+    if (this.theme === "nether") {
+      this.generateNether();
+    } else {
+      this.generateOverworld();
+    }
+  }
+
+  private generateOverworld(): void {
     const noise2D = createNoise2D(mulberry32(this.seed));
     const detail2D = createNoise2D(mulberry32(this.seed + 1));
     const treeRand = mulberry32(this.seed + 2);
@@ -186,6 +204,80 @@ export class World {
     }
 
     this.generateVillage(villageRand);
+
+    const portalRand = mulberry32(this.seed + 6);
+    const [baseX, baseZ] = this.findSpawnPoint();
+    let placed = false;
+    for (let attempt = 0; attempt < 12 && !placed; attempt++) {
+      const angle = portalRand() * Math.PI * 2;
+      const dist = 16 + portalRand() * 10;
+      const px = Math.round(baseX + Math.cos(angle) * dist);
+      const pz = Math.round(baseZ + Math.sin(angle) * dist);
+      const spot = this.findBuildSpot(px, pz, 4, 1, SEA_LEVEL);
+      if (spot) {
+        this.buildPortal(spot[0], spot[1]);
+        placed = true;
+      }
+    }
+    // Guaranteed fallback: the spawn point itself is always dry land.
+    if (!placed) {
+      const spot = this.findBuildSpot(baseX, baseZ, 4, 1, SEA_LEVEL);
+      if (spot) this.buildPortal(spot[0], spot[1]);
+    }
+  }
+
+  /** Barren, flatter netherrack terrain with scattered obsidian spikes and a single return portal. */
+  private generateNether(): void {
+    const noise2D = createNoise2D(mulberry32(this.seed));
+    const detail2D = createNoise2D(mulberry32(this.seed + 1));
+    const spikeRand = mulberry32(this.seed + 2);
+    const baseHeight = 14;
+
+    for (let x = 0; x < this.sizeX; x++) {
+      for (let z = 0; z < this.sizeZ; z++) {
+        const base = noise2D(x * 0.02, z * 0.02);
+        const detail = detail2D(x * 0.06, z * 0.06);
+        const h = Math.floor(baseHeight + base * 6 + detail * 2);
+        const height = Math.max(3, Math.min(this.height - 10, h));
+        this.heightmap[z * this.sizeX + x] = height;
+        for (let y = 0; y < height; y++) {
+          this.blocks[this.index(x, y, z)] = BlockType.NETHERRACK;
+        }
+      }
+    }
+
+    // Scatter jagged obsidian spikes for atmosphere.
+    const spacing = 10;
+    for (let cx = 2; cx < this.sizeX - 2; cx += spacing) {
+      for (let cz = 2; cz < this.sizeZ - 2; cz += spacing) {
+        if (spikeRand() > 0.4) continue;
+        const x = cx + Math.floor(spikeRand() * spacing);
+        const z = cz + Math.floor(spikeRand() * spacing);
+        if (!this.inBounds(x, 0, z)) continue;
+        const groundY = this.heightAt(x, z);
+        const spikeHeight = 3 + Math.floor(spikeRand() * 5);
+        for (let i = 0; i < spikeHeight; i++) {
+          this.setBlock(x, groundY + i, z, BlockType.OBSIDIAN);
+        }
+      }
+    }
+
+    const centerX = Math.floor(this.sizeX / 2);
+    const centerZ = Math.floor(this.sizeZ / 2);
+    const spot = this.findBuildSpot(centerX, centerZ, 4, 1, 0);
+    if (spot) this.buildPortal(spot[0], spot[1]);
+  }
+
+  /** Builds a 4-wide x5-tall obsidian portal frame with a 2x3 glowing portal interior. */
+  private buildPortal(x: number, z: number): void {
+    const groundY = this.heightAt(x + 1, z);
+    for (let dx = 0; dx <= 3; dx++) {
+      for (let dy = 0; dy <= 4; dy++) {
+        const onEdge = dx === 0 || dx === 3 || dy === 0 || dy === 4;
+        this.setBlock(x + dx, groundY + dy, z, onEdge ? BlockType.OBSIDIAN : BlockType.PORTAL);
+      }
+    }
+    this.portalPosition = [x + 1.5, groundY + 1, z + 0.5];
   }
 
   /** Builds a small cluster of houses around the spawn point, connected by paths. */
@@ -203,7 +295,7 @@ export class World {
 
     const doors: [number, number][] = [];
     for (const [ox, oz] of offsets) {
-      const spot = this.findHouseSpot(baseX + ox, baseZ + oz, size);
+      const spot = this.findBuildSpot(baseX + ox, baseZ + oz, size, size, SEA_LEVEL);
       if (!spot) continue;
       const [x, z] = spot;
       this.buildHouse(x, z, size, rand);
@@ -216,18 +308,18 @@ export class World {
     }
   }
 
-  /** Searches an expanding ring around (x, z) for dry, in-bounds land to place a house footprint. */
-  private findHouseSpot(x: number, z: number, size: number): [number, number] | null {
+  /** Searches an expanding ring around (x, z) for in-bounds land above minGroundY to place a width x depth footprint. */
+  private findBuildSpot(x: number, z: number, width: number, depth: number, minGroundY: number): [number, number] | null {
     for (let ring = 0; ring <= 4; ring++) {
       for (let dx = -ring; dx <= ring; dx++) {
         for (let dz = -ring; dz <= ring; dz++) {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== ring) continue;
           const hx = x + dx * 2;
           const hz = z + dz * 2;
-          if (!this.inBounds(hx - 1, 0, hz - 1) || !this.inBounds(hx + size, 0, hz + size)) continue;
-          const cx = hx + Math.floor(size / 2);
-          const cz = hz + Math.floor(size / 2);
-          if (this.heightAt(cx, cz) <= SEA_LEVEL) continue;
+          if (!this.inBounds(hx - 1, 0, hz - 1) || !this.inBounds(hx + width, 0, hz + depth)) continue;
+          const cx = hx + Math.floor(width / 2);
+          const cz = hz + Math.floor(depth / 2);
+          if (this.heightAt(cx, cz) <= minGroundY) continue;
           return [hx, hz];
         }
       }

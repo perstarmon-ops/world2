@@ -35,7 +35,7 @@ export class Player {
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
     domElement: HTMLElement,
-    private readonly world: World,
+    private world: World,
   ) {
     this.controls = new PointerLockControls(camera, domElement);
 
@@ -194,6 +194,19 @@ export class Player {
     this.position.copy(this.spawnPosition);
     this.velocity.set(0, 0, 0);
     this.grounded = false;
+  }
+
+  /** Switches which World this player collides against, e.g. when stepping through a portal. */
+  setWorld(world: World): void {
+    this.world = world;
+  }
+
+  /** Moves the player to an exact position (e.g. through a portal) without carrying over momentum. */
+  teleportTo(x: number, y: number, z: number): void {
+    this.position.set(x, y, z);
+    this.velocity.set(0, 0, 0);
+    this.grounded = false;
+    this.syncCamera();
   }
 
   getEyePosition(): THREE.Vector3 {

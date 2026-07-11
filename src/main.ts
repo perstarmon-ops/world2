@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { AnimalManager } from "./AnimalManager";
+import { BlockType } from "./blocks";
 import { ChunkMesher } from "./ChunkMesher";
 import { DayNightCycle } from "./DayNightCycle";
 import { Interaction } from "./Interaction";
@@ -57,13 +58,19 @@ const dayNight = new DayNightCycle(
   Math.max(WORLD_SIZE_X, WORLD_SIZE_Z),
 );
 
-const world = new World();
-const mesher = new ChunkMesher(world, scene);
-mesher.buildAll();
+const overworld = new World(1337, "overworld");
+const overworldMesher = new ChunkMesher(overworld, scene);
+overworldMesher.buildAll();
+const overworldAnimals = new AnimalManager(overworld, scene);
 
-const animals = new AnimalManager(world, scene);
+const nether = new World(4242, "nether");
+const netherMesher = new ChunkMesher(nether, scene);
+netherMesher.buildAll();
+netherMesher.setVisible(false);
 
-const player = new Player(camera, renderer.domElement, world);
+const NETHER_SKY = new THREE.Color(0x2a0f0a);
+
+const player = new Player(camera, renderer.domElement, overworld);
 
 const inventory = new Inventory();
 const ui = new UI(app, inventory);
@@ -72,13 +79,34 @@ const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 const interaction = new Interaction(
   camera,
   player.controls,
-  world,
-  mesher,
+  overworld,
+  overworldMesher,
   player,
   inventory,
-  animals,
+  overworldAnimals,
   renderer.domElement,
 );
+
+let inNether = false;
+let portalCooldown = 0;
+const PORTAL_COOLDOWN_SECONDS = 2;
+
+/** Swaps which dimension the player, interaction, mesher visibility, and animals target. */
+function enterDimension(next: World, nextMesher: ChunkMesher, goingToNether: boolean): void {
+  const spawn = next.getPortalPosition();
+  if (!spawn) return;
+
+  player.setWorld(next);
+  player.teleportTo(spawn[0], spawn[1], spawn[2]);
+  interaction.setDimension(next, nextMesher);
+
+  overworldMesher.setVisible(!goingToNether);
+  netherMesher.setVisible(goingToNether);
+  overworldAnimals.setActive(!goingToNether);
+
+  inNether = goingToNether;
+  portalCooldown = PORTAL_COOLDOWN_SECONDS;
+}
 
 const toolView = new ToolView();
 scene.add(toolView.group);
@@ -122,8 +150,25 @@ function animate(): void {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
   player.update(dt);
-  dayNight.update(dt, camera.position);
-  animals.update(dt, player.position, dayNight.getDaylight());
+
+  if (inNether) {
+    scene.background = NETHER_SKY;
+    (scene.fog as THREE.Fog).color.copy(NETHER_SKY);
+  } else {
+    dayNight.update(dt, camera.position);
+    overworldAnimals.update(dt, player.position, dayNight.getDaylight());
+  }
+
+  portalCooldown = Math.max(0, portalCooldown - dt);
+  if (portalCooldown === 0) {
+    const activeWorld = inNether ? nether : overworld;
+    const p = player.position;
+    const block = activeWorld.getBlock(Math.floor(p.x), Math.floor(p.y + 0.9), Math.floor(p.z));
+    if (block === BlockType.PORTAL) {
+      if (inNether) enterDimension(overworld, overworldMesher, false);
+      else enterDimension(nether, netherMesher, true);
+    }
+  }
 
   const state = interaction.update(dt);
   toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked, inventory.getSelectedBlock());

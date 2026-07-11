@@ -113,8 +113,45 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.PATH, paintTexture(BLOCKS[BlockType.PATH].color, 17, { horizontalBands: true }), false);
   makeMat(BlockType.DOOR_CLOSED, paintDoorClosed(), false);
   makeMat(BlockType.DOOR_OPEN, paintDoorOpen(), true, 1);
+  makeMat(BlockType.OBSIDIAN, paintObsidian(), false);
+  makeMat(BlockType.PORTAL, paintPortal(), true, 0.85);
+  makeMat(BlockType.NETHERRACK, paintTexture(BLOCKS[BlockType.NETHERRACK].color, 21, { grain: 26 }), false);
 
   return materials;
+}
+
+function paintObsidian(): HTMLCanvasElement {
+  const color = BLOCKS[BlockType.OBSIDIAN].color;
+  const canvas = paintTexture(color, 20, { grain: 14 });
+  const ctx = canvas.getContext("2d")!;
+  const rand = mulberry32(122);
+  for (let i = 0; i < 6; i++) {
+    const x = Math.floor(rand() * TEXTURE_SIZE);
+    const y = Math.floor(rand() * TEXTURE_SIZE);
+    ctx.fillStyle = "rgba(150, 90, 220, 0.7)";
+    ctx.fillRect(x, y, 1, 1);
+  }
+  return canvas;
+}
+
+/** Swirling purple portal surface, painted as concentric wavy bands so it reads as an energy field rather than a flat panel. */
+function paintPortal(): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = TEXTURE_SIZE;
+  canvas.height = TEXTURE_SIZE;
+  const ctx = canvas.getContext("2d")!;
+  const cx = TEXTURE_SIZE / 2;
+  const cy = TEXTURE_SIZE / 2;
+  for (let y = 0; y < TEXTURE_SIZE; y++) {
+    for (let x = 0; x < TEXTURE_SIZE; x++) {
+      const dist = Math.hypot(x - cx, y - cy);
+      const wave = Math.sin(dist * 1.1 - x * 0.4 + y * 0.4) * 30;
+      const [r, g, b] = shade(BLOCKS[BlockType.PORTAL].color, wave);
+      ctx.fillStyle = `rgb(${r | 0}, ${g | 0}, ${b | 0})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  return canvas;
 }
 
 function paintDoorClosed(): HTMLCanvasElement {

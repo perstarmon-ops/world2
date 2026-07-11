@@ -15,7 +15,7 @@ const TOOL_BONUS_SPEED = 2;
 
 /** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. The sword can't mine at all. */
 const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
-  pickaxe: [BlockType.STONE, BlockType.DIAMOND_ORE, BlockType.GOLD_ORE],
+  pickaxe: [BlockType.STONE, BlockType.DIAMOND_ORE, BlockType.GOLD_ORE, BlockType.OBSIDIAN, BlockType.NETHERRACK],
   axe: [BlockType.WOOD, BlockType.LEAVES, BlockType.DOOR_CLOSED, BlockType.DOOR_OPEN],
   shovel: [BlockType.DIRT],
   sword: [],
@@ -53,8 +53,8 @@ export class Interaction {
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
     private readonly controls: PointerLockControls,
-    private readonly world: World,
-    private readonly mesher: ChunkMesher,
+    private world: World,
+    private mesher: ChunkMesher,
     private readonly player: Player,
     private readonly inventory: Inventory,
     private readonly animals: AnimalManager,
@@ -149,6 +149,13 @@ export class Interaction {
     const direction = new THREE.Vector3();
     this.camera.getWorldDirection(direction);
     return raycastVoxels(this.world, origin, direction, REACH);
+  }
+
+  /** Switches which World/ChunkMesher this player mines and places against, e.g. when stepping through a portal. */
+  setDimension(world: World, mesher: ChunkMesher): void {
+    this.world = world;
+    this.mesher = mesher;
+    this.resetMining();
   }
 
   /** Advances the mining timer against whatever block is under the crosshair; returns the current visual state. */
