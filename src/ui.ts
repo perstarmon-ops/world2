@@ -226,16 +226,19 @@ export class UI {
       icon.textContent = TOOL_ICONS[slot.tool];
       swatch.style.background = "";
       count.textContent = "";
+      el.title = slot.tool.charAt(0).toUpperCase() + slot.tool.slice(1);
     } else if (slot?.kind === "resource") {
       el.classList.remove("vc-slot-empty");
       icon.textContent = "";
       swatch.style.background = rgb(BLOCKS[slot.block].color);
       count.textContent = String(slot.count);
+      el.title = `${BLOCKS[slot.block].name} x${slot.count}`;
     } else {
       el.classList.add("vc-slot-empty");
       icon.textContent = "";
       swatch.style.background = "";
       count.textContent = "";
+      el.title = "Empty";
     }
   }
 
