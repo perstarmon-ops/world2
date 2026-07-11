@@ -39,6 +39,7 @@ export class UI {
   private readonly vitals: HTMLDivElement;
   private readonly healthEls: HTMLDivElement[] = [];
   private readonly hungerEls: HTMLDivElement[] = [];
+  private readonly saveBtn: HTMLButtonElement;
   private inventoryOpen = false;
   private pickedSlot: number | null = null;
   private modeChosen = false;
@@ -48,6 +49,8 @@ export class UI {
     root: HTMLElement,
     private readonly inventory: Inventory,
     private readonly onModeSelected: (mode: "survival" | "creative") => void = () => {},
+    private readonly onContinue: (() => void) | null = null,
+    private readonly onSave: () => void = () => {},
   ) {
     const style = document.createElement("style");
     style.textContent = CSS;
@@ -164,6 +167,14 @@ export class UI {
       <h1>VoxelCraft</h1>
       <p>Choose a game mode</p>
       <div class="vc-mode-buttons">
+        ${
+          this.onContinue
+            ? `<button class="vc-mode-btn" data-mode="continue">
+                <div class="vc-mode-title">Continue</div>
+                <div class="vc-mode-desc">Resume your saved world</div>
+              </button>`
+            : ""
+        }
         <button class="vc-mode-btn" data-mode="survival">
           <div class="vc-mode-title">Survival</div>
           <div class="vc-mode-desc">Mine and gather everything from scratch</div>
@@ -178,9 +189,13 @@ export class UI {
       e.stopPropagation();
       const target = (e.target as HTMLElement).closest<HTMLButtonElement>(".vc-mode-btn");
       if (!target) return;
-      const mode = target.dataset.mode === "creative" ? "creative" : "survival";
-      if (mode === "creative") this.inventory.setCreative();
-      this.onModeSelected(mode);
+      if (target.dataset.mode === "continue") {
+        this.onContinue?.();
+      } else {
+        const mode = target.dataset.mode === "creative" ? "creative" : "survival";
+        if (mode === "creative") this.inventory.setCreative();
+        this.onModeSelected(mode);
+      }
       this.modeChosen = true;
       this.modeSelect.classList.add("vc-hidden");
       this.refreshInventory();
@@ -194,6 +209,16 @@ export class UI {
     this.clockEl = document.createElement("div");
     this.clockEl.className = "vc-clock";
     root.appendChild(this.clockEl);
+
+    this.saveBtn = document.createElement("button");
+    this.saveBtn.className = "vc-save-btn";
+    this.saveBtn.textContent = "💾 Save";
+    this.saveBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.onSave();
+      this.flashSaved();
+    });
+    root.appendChild(this.saveBtn);
 
     window.addEventListener("keydown", (e) => {
       const num = parseInt(e.code.replace("Digit", ""), 10);
@@ -304,6 +329,13 @@ export class UI {
 
   setLocked(locked: boolean): void {
     this.instructions.classList.toggle("vc-hidden", locked);
+  }
+
+  private flashSaved(): void {
+    this.saveBtn.textContent = "Saved!";
+    window.setTimeout(() => {
+      this.saveBtn.textContent = "💾 Save";
+    }, 1200);
   }
 
   setDebugText(text: string): void {
@@ -653,5 +685,26 @@ const CSS = `
   text-shadow: 0 0 4px rgba(0,0,0,0.8);
   z-index: 10;
   pointer-events: none;
+}
+.vc-save-btn {
+  position: fixed;
+  top: 40px;
+  right: 12px;
+  /* Above .vc-instructions (z-index 20, the "click to play" overlay shown
+     whenever pointer lock isn't held) so it stays clickable while unlocked -
+     that's the only time it's reachable, since the game canvas otherwise
+     captures every click while locked. */
+  z-index: 21;
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 4px;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+.vc-save-btn:hover {
+  background: rgba(0,0,0,0.6);
 }
 `;

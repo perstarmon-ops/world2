@@ -111,4 +111,24 @@ export class Inventory {
     }
     return true;
   }
+
+  isCreative(): boolean {
+    return this.creative;
+  }
+
+  /** For save/load: restores creative mode without re-filling every placeable slot (loadSlotsSnapshot supplies the exact contents). */
+  setCreativeMode(value: boolean): void {
+    this.creative = value;
+  }
+
+  getSlotsSnapshot(): SlotContent[] {
+    return this.slots.map((slot) => (slot ? { ...slot } : null));
+  }
+
+  loadSlotsSnapshot(slots: SlotContent[]): void {
+    for (let i = 0; i < TOTAL_SLOT_COUNT; i++) {
+      const slot = slots[i];
+      this.slots[i] = slot ? { ...slot } : null;
+    }
+  }
 }

@@ -8,6 +8,7 @@ import { Inventory } from "./Inventory";
 import { Music } from "./Music";
 import { Player } from "./Player";
 import { PlayerPreview } from "./PlayerPreview";
+import { applySave, loadGame, saveGame } from "./Save";
 import { Sfx } from "./Sfx";
 import { ToolView } from "./ToolView";
 import { UI } from "./ui";
@@ -79,11 +80,6 @@ const player = new Player(camera, renderer.domElement, overworld, sfx);
 const music = new Music();
 
 const inventory = new Inventory();
-const ui = new UI(app, inventory, (mode) => {
-  player.setFlying(mode === "creative");
-  ui.setVitalsVisible(mode !== "creative");
-});
-const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 
 const interaction = new Interaction(
   camera,
@@ -100,6 +96,46 @@ const interaction = new Interaction(
 let inNether = false;
 let portalCooldown = 0;
 const PORTAL_COOLDOWN_SECONDS = 2;
+let currentMode: "survival" | "creative" = "survival";
+
+const savedGame = loadGame();
+
+const ui = new UI(
+  app,
+  inventory,
+  (mode) => {
+    currentMode = mode;
+    player.setFlying(mode === "creative");
+    ui.setVitalsVisible(mode !== "creative");
+  },
+  savedGame
+    ? () => {
+        applySave(savedGame, player, inventory, overworld, nether);
+        overworldMesher.buildAll();
+        netherMesher.buildAll();
+
+        const goingToNether = savedGame.dimension === "nether";
+        player.setWorld(goingToNether ? nether : overworld);
+        interaction.setDimension(
+          goingToNether ? nether : overworld,
+          goingToNether ? netherMesher : overworldMesher,
+          goingToNether ? netherAnimals : overworldAnimals,
+        );
+        overworldMesher.setVisible(!goingToNether);
+        netherMesher.setVisible(goingToNether);
+        overworldAnimals.setActive(!goingToNether);
+        netherAnimals.setActive(goingToNether);
+        inNether = goingToNether;
+        music.setMood(goingToNether ? "nether" : "overworld");
+
+        currentMode = savedGame.mode;
+        player.setFlying(savedGame.mode === "creative");
+        ui.setVitalsVisible(savedGame.mode !== "creative");
+      }
+    : null,
+  () => saveGame(currentMode, inNether ? "nether" : "overworld", player, inventory, overworld, nether),
+);
+const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 
 /** Swaps which dimension the player, interaction, mesher visibility, and animals target. */
 function enterDimension(next: World, nextMesher: ChunkMesher, nextAnimals: AnimalManager, goingToNether: boolean): void {

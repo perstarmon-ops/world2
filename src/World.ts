@@ -79,6 +79,16 @@ export class World {
     return true;
   }
 
+  /** Raw block data for save/load; the heightmap is generation-time-only and doesn't need to round-trip. */
+  getBlocksSnapshot(): Uint8Array {
+    return this.blocks;
+  }
+
+  /** Restores block data saved via getBlocksSnapshot(); a size mismatch (e.g. after a world-size change) is ignored. */
+  loadBlocksSnapshot(data: Uint8Array): void {
+    if (data.length === this.blocks.length) this.blocks.set(data);
+  }
+
   isSolid(x: number, y: number, z: number): boolean {
     const block = this.getBlock(x, y, z);
     return BLOCKS[block].solid;

@@ -364,6 +364,12 @@ export class Player {
     return !this.creative && this.hunger < MAX_HUNGER;
   }
 
+  /** For save/load: restores health/hunger without going through takeDamage/eat. */
+  setVitals(health: number, hunger: number): void {
+    this.health = THREE.MathUtils.clamp(health, 0, MAX_HEALTH);
+    this.hunger = THREE.MathUtils.clamp(hunger, 0, MAX_HUNGER);
+  }
+
   /** Restores hunger from eating; the caller is responsible for consuming the food item. */
   eat(): void {
     this.hunger = Math.min(MAX_HUNGER, this.hunger + FOOD_RESTORE);
