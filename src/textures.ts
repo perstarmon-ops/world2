@@ -67,6 +67,27 @@ export type MaterialKey =
   | "wood_top"
   | BlockType;
 
+/** Painted canvases keyed the same as the materials, kept around so UI icons can reuse the exact in-world texture. */
+const iconCanvases = new Map<MaterialKey, HTMLCanvasElement>();
+const iconUrlCache = new Map<BlockType, string>();
+
+/** Picks which face's texture best represents a block as a flat inventory icon. */
+function iconKeyFor(block: BlockType): MaterialKey {
+  if (block === BlockType.GRASS) return "grass_top";
+  if (block === BlockType.WOOD) return "wood_top";
+  return block;
+}
+
+/** A data URL of the block's real in-world texture, for painting inventory slot icons. */
+export function getBlockIconUrl(block: BlockType): string {
+  const cached = iconUrlCache.get(block);
+  if (cached) return cached;
+  const canvas = iconCanvases.get(iconKeyFor(block));
+  const url = canvas ? canvas.toDataURL() : "";
+  iconUrlCache.set(block, url);
+  return url;
+}
+
 /** Builds one MeshLambertMaterial per distinct block face appearance. */
 export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   const materials = new Map<MaterialKey, THREE.MeshLambertMaterial>();
@@ -77,6 +98,7 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
     transparent: boolean,
     opacity = 1,
   ) => {
+    iconCanvases.set(key, canvas);
     materials.set(
       key,
       new THREE.MeshLambertMaterial({

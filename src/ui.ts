@@ -1,9 +1,6 @@
 import { BLOCKS } from "./blocks";
 import { HOTBAR_SLOT_COUNT, Inventory, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
-
-function rgb([r, g, b]: [number, number, number]): string {
-  return `rgb(${r}, ${g}, ${b})`;
-}
+import { getBlockIconUrl } from "./textures";
 
 const TOOL_ICONS: Record<Tool, string> = {
   pickaxe: "⛏",
@@ -248,19 +245,19 @@ export class UI {
     if (slot?.kind === "tool") {
       el.classList.remove("vc-slot-empty");
       icon.textContent = TOOL_ICONS[slot.tool];
-      swatch.style.background = "";
+      swatch.style.backgroundImage = "";
       count.textContent = "";
       el.title = slot.tool.charAt(0).toUpperCase() + slot.tool.slice(1);
     } else if (slot?.kind === "resource") {
       el.classList.remove("vc-slot-empty");
       icon.textContent = "";
-      swatch.style.background = rgb(BLOCKS[slot.block].color);
+      swatch.style.backgroundImage = `url(${getBlockIconUrl(slot.block)})`;
       count.textContent = String(slot.count);
       el.title = `${BLOCKS[slot.block].name} x${slot.count}`;
     } else {
       el.classList.add("vc-slot-empty");
       icon.textContent = "";
-      swatch.style.background = "";
+      swatch.style.backgroundImage = "";
       count.textContent = "";
       el.title = "Empty";
     }
@@ -376,6 +373,9 @@ const CSS = `
   position: absolute;
   inset: 4px;
   border-radius: 2px;
+  background-size: cover;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
 }
 .vc-count {
   position: absolute;
