@@ -6,12 +6,16 @@ import { SEA_LEVEL, World } from "./World";
 const PIG_COUNT = 6;
 const COW_COUNT = 6;
 const ZOMBIE_COUNT = 5;
+const MAX_PER_KIND = 10;
+const RESPAWN_INTERVAL = 20;
+const ALL_KINDS: MobKind[] = ["pig", "cow", "zombie"];
 const SPAWN_ATTEMPTS_PER_MOB = 40;
 const MOB_HIT_RADIUS = 0.6;
 const MOB_CENTER_HEIGHT = 0.4;
 
 export class AnimalManager {
   private readonly mobs: Mob[] = [];
+  private respawnTimer = 0;
 
   constructor(private readonly world: World, private readonly scene: THREE.Scene) {
     this.spawnKind("pig", PIG_COUNT);
@@ -50,6 +54,15 @@ export class AnimalManager {
   update(dt: number, playerPosition: THREE.Vector3): void {
     for (const mob of this.mobs) {
       mob.update(dt, this.world, playerPosition);
+    }
+
+    this.respawnTimer += dt;
+    if (this.respawnTimer >= RESPAWN_INTERVAL) {
+      this.respawnTimer = 0;
+      for (const kind of ALL_KINDS) {
+        const count = this.mobs.reduce((n, mob) => n + (mob.kind === kind ? 1 : 0), 0);
+        if (count < MAX_PER_KIND) this.spawnKind(kind, 1);
+      }
     }
   }
 
