@@ -13,6 +13,8 @@ export enum BlockType {
   MEAT = 11,
   DIAMOND_ORE = 12,
   DIAMOND = 13,
+  FLOWER_RED = 14,
+  FLOWER_YELLOW = 15,
 }
 
 export interface BlockInfo {
@@ -27,6 +29,8 @@ export interface BlockInfo {
   breakable: boolean;
   /** Seconds of continuous mining (with the pickaxe) needed to break this block. */
   hardness: number;
+  /** Renders as a thin cross-shaped billboard plant instead of a solid cube. */
+  renderAsCross?: boolean;
 }
 
 export const BLOCKS: Record<BlockType, BlockInfo> = {
@@ -44,4 +48,6 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.MEAT]: { name: "Meat", color: [186, 92, 84], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
   [BlockType.DIAMOND_ORE]: { name: "Diamond Ore", color: [120, 122, 126], solid: true, transparent: false, placeable: false, breakable: true, hardness: 1.4 },
   [BlockType.DIAMOND]: { name: "Diamond", color: [110, 226, 220], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
+  [BlockType.FLOWER_RED]: { name: "Red Flower", color: [206, 48, 48], solid: false, transparent: true, placeable: true, breakable: true, hardness: 0.1, renderAsCross: true },
+  [BlockType.FLOWER_YELLOW]: { name: "Yellow Flower", color: [227, 201, 42], solid: false, transparent: true, placeable: true, breakable: true, hardness: 0.1, renderAsCross: true },
 };

@@ -73,6 +73,24 @@ const FACE_UVS: [number, number][] = [
   [0, 1],
 ];
 
+// Two diagonal quads forming an X shape, for thin cross-billboard plants (flowers).
+// Always emitted regardless of neighbors, and rendered with a double-sided material
+// so each single quad is visible from both directions.
+const CROSS_QUADS: [number, number, number][][] = [
+  [
+    [0, 0, 0],
+    [1, 0, 1],
+    [1, 1, 1],
+    [0, 1, 0],
+  ],
+  [
+    [1, 0, 0],
+    [0, 0, 1],
+    [0, 1, 1],
+    [1, 1, 0],
+  ],
+];
+
 function materialKeyFor(block: BlockType, faceDir: [number, number, number]): MaterialKey {
   if (block === BlockType.GRASS) {
     if (faceDir[1] === 1) return "grass_top";
@@ -142,6 +160,26 @@ export class ChunkMesher {
         for (let y = 0; y < WORLD_HEIGHT; y++) {
           const block = this.world.getBlock(x, y, z);
           if (block === BlockType.AIR) continue;
+
+          if (BLOCKS[block].renderAsCross) {
+            const key2 = materialKeyFor(block, [0, 1, 0]);
+            let buf = buffers.get(key2);
+            if (!buf) {
+              buf = emptyBuffer();
+              buffers.set(key2, buf);
+            }
+            for (const quad of CROSS_QUADS) {
+              const vertStart = buf.positions.length / 3;
+              for (let i = 0; i < 4; i++) {
+                const corner = quad[i];
+                buf.positions.push(x + corner[0], y + corner[1], z + corner[2]);
+                buf.normals.push(0, 1, 0);
+                buf.uvs.push(FACE_UVS[i][0], FACE_UVS[i][1]);
+              }
+              buf.indices.push(vertStart, vertStart + 1, vertStart + 2, vertStart, vertStart + 2, vertStart + 3);
+            }
+            continue;
+          }
 
           for (const face of FACES) {
             const nx = x + face.dir[0];

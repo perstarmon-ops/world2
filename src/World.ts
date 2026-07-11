@@ -116,6 +116,7 @@ export class World {
     const detail2D = createNoise2D(mulberry32(this.seed + 1));
     const treeRand = mulberry32(this.seed + 2);
     const oreRand = mulberry32(this.seed + 3);
+    const flowerRand = mulberry32(this.seed + 4);
 
     for (let x = 0; x < this.sizeX; x++) {
       for (let z = 0; z < this.sizeZ; z++) {
@@ -155,6 +156,23 @@ export class World {
         if (height <= SEA_LEVEL) continue;
         if (this.getBlock(x, height - 1, z) !== BlockType.GRASS) continue;
         this.plantTree(x, height, z, treeRand);
+      }
+    }
+
+    // Scatter flowers on grass, one candidate per 3x3 cell so they stay dense but spread out.
+    const flowerSpacing = 3;
+    for (let cx = 0; cx < this.sizeX; cx += flowerSpacing) {
+      for (let cz = 0; cz < this.sizeZ; cz += flowerSpacing) {
+        if (flowerRand() > 0.3) continue;
+        const x = cx + Math.floor(flowerRand() * flowerSpacing);
+        const z = cz + Math.floor(flowerRand() * flowerSpacing);
+        if (!this.inBounds(x, 0, z)) continue;
+        const height = this.heightAt(x, z);
+        if (height <= SEA_LEVEL) continue;
+        if (this.getBlock(x, height - 1, z) !== BlockType.GRASS) continue;
+        if (this.getBlock(x, height, z) !== BlockType.AIR) continue;
+        const type = flowerRand() < 0.5 ? BlockType.FLOWER_RED : BlockType.FLOWER_YELLOW;
+        this.setBlock(x, height, z, type);
       }
     }
   }

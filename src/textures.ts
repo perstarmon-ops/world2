@@ -105,8 +105,34 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.MEAT, paintTexture(BLOCKS[BlockType.MEAT].color, 11, { grain: 26 }), false);
   makeMat(BlockType.DIAMOND_ORE, paintDiamondOre(), false);
   makeMat(BlockType.DIAMOND, paintTexture(BLOCKS[BlockType.DIAMOND].color, 13, { grain: 14 }), false);
+  makeMat(BlockType.FLOWER_RED, paintFlower(BLOCKS[BlockType.FLOWER_RED].color), true, 1);
+  makeMat(BlockType.FLOWER_YELLOW, paintFlower(BLOCKS[BlockType.FLOWER_YELLOW].color), true, 1);
 
   return materials;
+}
+
+/** Paints a small stem + petals on an otherwise transparent canvas, for cross-billboard plants. */
+function paintFlower(color: [number, number, number]): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = TEXTURE_SIZE;
+  canvas.height = TEXTURE_SIZE;
+  const ctx = canvas.getContext("2d")!;
+
+  const stem = BLOCKS[BlockType.LEAVES].color;
+  ctx.fillStyle = `rgb(${stem[0]}, ${stem[1]}, ${stem[2]})`;
+  ctx.fillRect(7, 8, 2, 8);
+
+  const [r, g, b] = color;
+  ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+  ctx.fillRect(6, 3, 4, 2);
+  ctx.fillRect(5, 5, 2, 3);
+  ctx.fillRect(9, 5, 2, 3);
+  ctx.fillRect(7, 5, 2, 4);
+
+  ctx.fillStyle = "rgb(255, 221, 92)";
+  ctx.fillRect(7, 6, 2, 2);
+
+  return canvas;
 }
 
 function paintGrassSide(): HTMLCanvasElement {
