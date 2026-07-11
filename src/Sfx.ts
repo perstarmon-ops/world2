@@ -10,7 +10,7 @@ export class Sfx {
 
   constructor() {
     this.master = this.ctx.createGain();
-    this.master.gain.value = 0.5;
+    this.master.gain.value = 0.9;
     this.master.connect(this.ctx.destination);
   }
 
@@ -58,21 +58,21 @@ export class Sfx {
   mineHit(): void {
     if (!this.started) return;
     const freq = 900 + Math.random() * 500;
-    this.noiseBurst(this.ctx.currentTime, 0.06, freq, "bandpass", 0.35, 1.2);
+    this.noiseBurst(this.ctx.currentTime, 0.09, freq, "bandpass", 1.1, 0.6);
   }
 
   /** The crunch when a block finally breaks. */
   blockBreak(): void {
     if (!this.started) return;
     const now = this.ctx.currentTime;
-    this.noiseBurst(now, 0.18, 500, "lowpass", 0.4);
-    this.noiseBurst(now + 0.01, 0.1, 1800, "bandpass", 0.25, 1.5);
+    this.noiseBurst(now, 0.22, 500, "lowpass", 1.3);
+    this.noiseBurst(now + 0.01, 0.13, 1800, "bandpass", 0.7, 0.8);
   }
 
   /** A soft footstep tap. */
   footstep(): void {
     if (!this.started) return;
     const freq = 180 + Math.random() * 60;
-    this.noiseBurst(this.ctx.currentTime, 0.08, freq, "lowpass", 0.18);
+    this.noiseBurst(this.ctx.currentTime, 0.11, freq, "lowpass", 1.1);
   }
 }
