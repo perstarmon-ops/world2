@@ -1,7 +1,10 @@
 import { BlockType, BLOCKS } from "./blocks";
 
-export const RESOURCE_SLOT_COUNT = 8;
-export const TOOL_SLOT_INDEX = 0;
+export type Tool = "pickaxe" | "axe";
+
+export const TOOL_SLOTS: Tool[] = ["pickaxe", "axe"];
+export const RESOURCE_SLOT_COUNT = 7;
+export const TOTAL_SLOT_COUNT = TOOL_SLOTS.length + RESOURCE_SLOT_COUNT;
 
 export interface ResourceSlot {
   block: BlockType;
@@ -9,13 +12,13 @@ export interface ResourceSlot {
 }
 
 /**
- * Hotbar slot 0 is always the pickaxe (the mining tool, never consumed).
- * Slots 1..RESOURCE_SLOT_COUNT hold whatever blocks the player has mined,
+ * The first TOOL_SLOTS.length hotbar slots are fixed tools (pickaxe, axe -
+ * never consumed). The rest hold whatever blocks the player has mined,
  * appearing as they're first collected and disappearing once used up.
  */
 export class Inventory {
   private readonly resourceSlots: (ResourceSlot | null)[] = new Array(RESOURCE_SLOT_COUNT).fill(null);
-  private selected = TOOL_SLOT_INDEX;
+  private selected = 0;
 
   getResourceSlots(): ReadonlyArray<ResourceSlot | null> {
     return this.resourceSlots;
@@ -26,12 +29,13 @@ export class Inventory {
   }
 
   select(index: number): void {
-    if (index < 0 || index > RESOURCE_SLOT_COUNT) return;
+    if (index < 0 || index >= TOTAL_SLOT_COUNT) return;
     this.selected = index;
   }
 
-  isToolSelected(): boolean {
-    return this.selected === TOOL_SLOT_INDEX;
+  /** The currently selected tool, or null if a resource slot is selected. */
+  getSelectedTool(): Tool | null {
+    return TOOL_SLOTS[this.selected] ?? null;
   }
 
   /** Adds one of `block` to the first matching or empty resource slot. */
@@ -49,18 +53,19 @@ export class Inventory {
   }
 
   getSelectedBlock(): BlockType | null {
-    if (this.isToolSelected()) return null;
-    return this.resourceSlots[this.selected - 1]?.block ?? null;
+    if (this.getSelectedTool() !== null) return null;
+    return this.resourceSlots[this.selected - TOOL_SLOTS.length]?.block ?? null;
   }
 
   /** Consumes one of the currently selected resource; returns false if none is available. */
   consumeSelected(): boolean {
-    if (this.isToolSelected()) return false;
-    const slot = this.resourceSlots[this.selected - 1];
+    if (this.getSelectedTool() !== null) return false;
+    const index = this.selected - TOOL_SLOTS.length;
+    const slot = this.resourceSlots[index];
     if (!slot) return false;
     slot.count--;
     if (slot.count <= 0) {
-      this.resourceSlots[this.selected - 1] = null;
+      this.resourceSlots[index] = null;
     }
     return true;
   }

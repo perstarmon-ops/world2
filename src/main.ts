@@ -3,8 +3,8 @@ import { AnimalManager } from "./AnimalManager";
 import { ChunkMesher } from "./ChunkMesher";
 import { Interaction } from "./Interaction";
 import { Inventory } from "./Inventory";
-import { Pickaxe } from "./Pickaxe";
 import { Player } from "./Player";
+import { ToolView } from "./ToolView";
 import { UI } from "./ui";
 import { World, WORLD_SIZE_X, WORLD_SIZE_Z } from "./World";
 
@@ -57,8 +57,8 @@ const ui = new UI(app, inventory);
 
 const interaction = new Interaction(camera, player.controls, world, mesher, player, inventory, renderer.domElement);
 
-const pickaxe = new Pickaxe();
-scene.add(pickaxe.group);
+const toolView = new ToolView();
+scene.add(toolView.group);
 
 const targetOutline = new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(1.002, 1.002, 1.002)),
@@ -89,7 +89,7 @@ function animate(): void {
   animals.update(dt);
 
   const state = interaction.update(dt);
-  pickaxe.update(dt, camera, state.mining);
+  toolView.update(dt, camera, state.mining, inventory.getSelectedTool());
   ui.setMiningProgress(state.mining ? state.progress : null);
   ui.refreshInventory();
   if (state.targetBlock) {

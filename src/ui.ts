@@ -1,9 +1,14 @@
 import { BLOCKS } from "./blocks";
-import { Inventory, RESOURCE_SLOT_COUNT, TOOL_SLOT_INDEX } from "./Inventory";
+import { Inventory, RESOURCE_SLOT_COUNT, TOOL_SLOTS, TOTAL_SLOT_COUNT } from "./Inventory";
 
 function rgb([r, g, b]: [number, number, number]): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
+
+const TOOL_ICONS: Record<(typeof TOOL_SLOTS)[number], string> = {
+  pickaxe: "⛏",
+  axe: "🪓",
+};
 
 export class UI {
   private readonly slotEls: HTMLDivElement[] = [];
@@ -28,15 +33,17 @@ export class UI {
     const hotbar = document.createElement("div");
     hotbar.className = "vc-hotbar";
 
-    const toolSlot = document.createElement("div");
-    toolSlot.className = "vc-slot";
-    toolSlot.innerHTML = `
-      <div class="vc-tool-icon">⛏</div>
-      <div class="vc-key">1</div>
-    `;
-    toolSlot.addEventListener("click", () => this.inventory.select(TOOL_SLOT_INDEX));
-    hotbar.appendChild(toolSlot);
-    this.slotEls.push(toolSlot);
+    TOOL_SLOTS.forEach((tool, i) => {
+      const toolSlot = document.createElement("div");
+      toolSlot.className = "vc-slot";
+      toolSlot.innerHTML = `
+        <div class="vc-tool-icon">${TOOL_ICONS[tool]}</div>
+        <div class="vc-key">${i + 1}</div>
+      `;
+      toolSlot.addEventListener("click", () => this.inventory.select(i));
+      hotbar.appendChild(toolSlot);
+      this.slotEls.push(toolSlot);
+    });
 
     for (let i = 0; i < RESOURCE_SLOT_COUNT; i++) {
       const slot = document.createElement("div");
@@ -44,9 +51,9 @@ export class UI {
       slot.innerHTML = `
         <div class="vc-swatch"></div>
         <div class="vc-count"></div>
-        <div class="vc-key">${i + 2}</div>
+        <div class="vc-key">${i + TOOL_SLOTS.length + 1}</div>
       `;
-      slot.addEventListener("click", () => this.inventory.select(i + 1));
+      slot.addEventListener("click", () => this.inventory.select(i + TOOL_SLOTS.length));
       hotbar.appendChild(slot);
       this.slotEls.push(slot);
     }
@@ -61,7 +68,7 @@ export class UI {
         <li><b>WASD</b> move &nbsp; <b>Space</b> jump &nbsp; <b>Shift</b> sprint/dive</li>
         <li><b>Mouse</b> look &nbsp; <b>Hold left click</b> mine &nbsp; <b>Right click</b> place</li>
         <li><b>1-9</b> select slot &nbsp; <b>Esc</b> release mouse</li>
-        <li>Select the pickaxe (slot 1) to mine; select a mined block to place it</li>
+        <li>Pickaxe (1) and axe (2) mine; the axe breaks stone faster. Select a mined block to place it</li>
       </ul>
     `;
     root.appendChild(this.instructions);
@@ -72,7 +79,7 @@ export class UI {
 
     window.addEventListener("keydown", (e) => {
       const num = parseInt(e.code.replace("Digit", ""), 10);
-      if (!Number.isNaN(num) && num >= 1 && num <= RESOURCE_SLOT_COUNT + 1) {
+      if (!Number.isNaN(num) && num >= 1 && num <= TOTAL_SLOT_COUNT) {
         this.inventory.select(num - 1);
       }
     });
@@ -88,7 +95,7 @@ export class UI {
     this.slotEls.forEach((el, i) => el.classList.toggle("vc-selected", i === selected));
 
     resourceSlots.forEach((slot, i) => {
-      const el = this.slotEls[i + 1];
+      const el = this.slotEls[i + TOOL_SLOTS.length];
       const swatch = el.querySelector<HTMLDivElement>(".vc-swatch")!;
       const count = el.querySelector<HTMLDivElement>(".vc-count")!;
       if (slot) {

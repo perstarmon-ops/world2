@@ -9,6 +9,7 @@ import { World } from "./World";
 
 const REACH = 6;
 const WATER_MINING_SPEED = 0.35;
+const AXE_STONE_SPEED = 2;
 
 export interface InteractionState {
   mining: boolean;
@@ -90,11 +91,12 @@ export class Interaction {
 
     const hit = this.raycast();
     const hoverBlock = hit ? hit.block : null;
+    const tool = this.inventory.getSelectedTool();
 
     if (
       !this.isLeftDown ||
       !hit ||
-      !this.inventory.isToolSelected() ||
+      !tool ||
       !BLOCKS[this.world.getBlock(hit.block.x, hit.block.y, hit.block.z)].breakable
     ) {
       this.miningTarget = null;
@@ -109,7 +111,8 @@ export class Interaction {
 
     const blockType = this.world.getBlock(hit.block.x, hit.block.y, hit.block.z);
     const hardness = BLOCKS[blockType].hardness;
-    const speed = this.player.isInWater() ? WATER_MINING_SPEED : 1;
+    let speed = this.player.isInWater() ? WATER_MINING_SPEED : 1;
+    if (tool === "axe" && blockType === BlockType.STONE) speed *= AXE_STONE_SPEED;
     this.miningProgress += dt * speed;
 
     if (this.miningProgress >= hardness) {
