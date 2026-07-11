@@ -53,7 +53,7 @@ export function raycastVoxels(
     if (block !== BlockType.AIR) {
       return {
         block: new THREE.Vector3(x, y, z),
-        before: new THREE.Vector3(x - normal.x, y - normal.y, z - normal.z),
+        before: new THREE.Vector3(x + normal.x, y + normal.y, z + normal.z),
         normal: normal.clone(),
       };
     }
