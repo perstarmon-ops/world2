@@ -1,20 +1,18 @@
-import { BlockType, BLOCKS, HOTBAR_BLOCKS } from "./blocks";
+import { BLOCKS } from "./blocks";
+import { Inventory, RESOURCE_SLOT_COUNT, TOOL_SLOT_INDEX } from "./Inventory";
 
 function rgb([r, g, b]: [number, number, number]): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
 export class UI {
-  private selectedIndex = 0;
   private readonly slotEls: HTMLDivElement[] = [];
   private readonly instructions: HTMLDivElement;
   private readonly debugEl: HTMLDivElement;
   private readonly miningBar: HTMLDivElement;
   private readonly miningFill: HTMLDivElement;
 
-  onSelectionChange: ((block: BlockType) => void) | null = null;
-
-  constructor(root: HTMLElement) {
+  constructor(root: HTMLElement, private readonly inventory: Inventory) {
     const style = document.createElement("style");
     style.textContent = CSS;
     document.head.appendChild(style);
@@ -29,17 +27,29 @@ export class UI {
 
     const hotbar = document.createElement("div");
     hotbar.className = "vc-hotbar";
-    HOTBAR_BLOCKS.forEach((block, i) => {
+
+    const toolSlot = document.createElement("div");
+    toolSlot.className = "vc-slot";
+    toolSlot.innerHTML = `
+      <div class="vc-tool-icon">⛏</div>
+      <div class="vc-key">1</div>
+    `;
+    toolSlot.addEventListener("click", () => this.inventory.select(TOOL_SLOT_INDEX));
+    hotbar.appendChild(toolSlot);
+    this.slotEls.push(toolSlot);
+
+    for (let i = 0; i < RESOURCE_SLOT_COUNT; i++) {
       const slot = document.createElement("div");
-      slot.className = "vc-slot";
+      slot.className = "vc-slot vc-slot-empty";
       slot.innerHTML = `
-        <div class="vc-swatch" style="background:${rgb(BLOCKS[block].color)}"></div>
-        <div class="vc-key">${i + 1}</div>
+        <div class="vc-swatch"></div>
+        <div class="vc-count"></div>
+        <div class="vc-key">${i + 2}</div>
       `;
-      slot.addEventListener("click", () => this.select(i));
+      slot.addEventListener("click", () => this.inventory.select(i + 1));
       hotbar.appendChild(slot);
       this.slotEls.push(slot);
-    });
+    }
     root.appendChild(hotbar);
 
     this.instructions = document.createElement("div");
@@ -48,9 +58,10 @@ export class UI {
       <h1>VoxelCraft</h1>
       <p>Click to play</p>
       <ul>
-        <li><b>WASD</b> move &nbsp; <b>Space</b> jump &nbsp; <b>Shift</b> sprint</li>
+        <li><b>WASD</b> move &nbsp; <b>Space</b> jump &nbsp; <b>Shift</b> sprint/dive</li>
         <li><b>Mouse</b> look &nbsp; <b>Hold left click</b> mine &nbsp; <b>Right click</b> place</li>
-        <li><b>1-9</b> select block &nbsp; <b>Esc</b> release mouse</li>
+        <li><b>1-9</b> select slot &nbsp; <b>Esc</b> release mouse</li>
+        <li>Mine blocks with your pickaxe to collect them, then place what you've mined</li>
       </ul>
     `;
     root.appendChild(this.instructions);
@@ -61,22 +72,35 @@ export class UI {
 
     window.addEventListener("keydown", (e) => {
       const num = parseInt(e.code.replace("Digit", ""), 10);
-      if (!Number.isNaN(num) && num >= 1 && num <= HOTBAR_BLOCKS.length) {
-        this.select(num - 1);
+      if (!Number.isNaN(num) && num >= 1 && num <= RESOURCE_SLOT_COUNT + 1) {
+        this.inventory.select(num - 1);
       }
     });
 
-    this.select(0);
+    this.refreshInventory();
   }
 
-  private select(index: number): void {
-    this.selectedIndex = index;
-    this.slotEls.forEach((el, i) => el.classList.toggle("vc-selected", i === index));
-    this.onSelectionChange?.(HOTBAR_BLOCKS[index]);
-  }
+  /** Re-reads the inventory state and repaints the hotbar; cheap enough to call every frame. */
+  refreshInventory(): void {
+    const selected = this.inventory.getSelectedIndex();
+    const resourceSlots = this.inventory.getResourceSlots();
 
-  getSelectedBlock(): BlockType {
-    return HOTBAR_BLOCKS[this.selectedIndex];
+    this.slotEls.forEach((el, i) => el.classList.toggle("vc-selected", i === selected));
+
+    resourceSlots.forEach((slot, i) => {
+      const el = this.slotEls[i + 1];
+      const swatch = el.querySelector<HTMLDivElement>(".vc-swatch")!;
+      const count = el.querySelector<HTMLDivElement>(".vc-count")!;
+      if (slot) {
+        el.classList.remove("vc-slot-empty");
+        swatch.style.background = rgb(BLOCKS[slot.block].color);
+        count.textContent = String(slot.count);
+      } else {
+        el.classList.add("vc-slot-empty");
+        swatch.style.background = "";
+        count.textContent = "";
+      }
+    });
   }
 
   setLocked(locked: boolean): void {
@@ -166,10 +190,31 @@ const CSS = `
   border-color: #fff;
   box-shadow: 0 0 8px rgba(255,255,255,0.8);
 }
+.vc-slot-empty {
+  opacity: 0.45;
+}
+.vc-tool-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
 .vc-swatch {
   position: absolute;
   inset: 4px;
   border-radius: 2px;
+}
+.vc-count {
+  position: absolute;
+  bottom: 1px;
+  left: 3px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 2px #000;
+  font-family: monospace;
 }
 .vc-key {
   position: absolute;

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { AnimalManager } from "./AnimalManager";
 import { ChunkMesher } from "./ChunkMesher";
 import { Interaction } from "./Interaction";
+import { Inventory } from "./Inventory";
 import { Pickaxe } from "./Pickaxe";
 import { Player } from "./Player";
 import { UI } from "./ui";
@@ -51,17 +52,10 @@ const animals = new AnimalManager(world, scene);
 
 const player = new Player(camera, renderer.domElement, world);
 
-const ui = new UI(app);
+const inventory = new Inventory();
+const ui = new UI(app, inventory);
 
-const interaction = new Interaction(
-  camera,
-  player.controls,
-  world,
-  mesher,
-  player,
-  () => ui.getSelectedBlock(),
-  renderer.domElement,
-);
+const interaction = new Interaction(camera, player.controls, world, mesher, player, inventory, renderer.domElement);
 
 const pickaxe = new Pickaxe();
 scene.add(pickaxe.group);
@@ -97,6 +91,7 @@ function animate(): void {
   const state = interaction.update(dt);
   pickaxe.update(dt, camera, state.mining);
   ui.setMiningProgress(state.mining ? state.progress : null);
+  ui.refreshInventory();
   if (state.targetBlock) {
     targetOutline.position.set(state.targetBlock.x + 0.5, state.targetBlock.y + 0.5, state.targetBlock.z + 0.5);
     targetOutline.visible = true;

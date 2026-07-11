@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { BlockType, BLOCKS } from "./blocks";
 import { ChunkMesher } from "./ChunkMesher";
+import { Inventory } from "./Inventory";
 import { Player } from "./Player";
 import { raycastVoxels } from "./raycast";
 import { World } from "./World";
@@ -25,7 +26,7 @@ export class Interaction {
     private readonly world: World,
     private readonly mesher: ChunkMesher,
     private readonly player: Player,
-    private readonly getSelectedBlock: () => BlockType,
+    private readonly inventory: Inventory,
     domElement: HTMLElement,
   ) {
     const doc = domElement.ownerDocument;
@@ -58,12 +59,17 @@ export class Interaction {
   }
 
   private place(): void {
+    const blockType = this.inventory.getSelectedBlock();
+    if (blockType === null) return;
+
     const hit = this.raycast();
     if (!hit) return;
     const { x, y, z } = hit.before;
     if (!this.world.inBounds(x, y, z)) return;
     if (this.player.occupiesBlock(x, y, z)) return;
-    this.world.setBlock(x, y, z, this.getSelectedBlock());
+
+    if (!this.inventory.consumeSelected()) return;
+    this.world.setBlock(x, y, z, blockType);
     this.mesher.rebuildAround(x, z);
   }
 
@@ -102,6 +108,7 @@ export class Interaction {
     if (this.miningProgress >= hardness) {
       this.world.setBlock(hit.block.x, hit.block.y, hit.block.z, BlockType.AIR);
       this.mesher.rebuildAround(hit.block.x, hit.block.z);
+      this.inventory.add(blockType);
       this.miningTarget = null;
       this.miningProgress = 0;
       return { mining: false, progress: 0, targetBlock: null };

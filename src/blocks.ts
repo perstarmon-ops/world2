@@ -39,16 +39,3 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.GLASS]: { name: "Glass", color: [210, 235, 240], solid: true, transparent: true, placeable: true, breakable: true, hardness: 0.35 },
   [BlockType.BRICK]: { name: "Brick", color: [150, 78, 61], solid: true, transparent: false, placeable: true, breakable: true, hardness: 1.0 },
 };
-
-/** Blocks the player can select in the hotbar, in slot order. */
-export const HOTBAR_BLOCKS: BlockType[] = [
-  BlockType.GRASS,
-  BlockType.DIRT,
-  BlockType.STONE,
-  BlockType.SAND,
-  BlockType.WOOD,
-  BlockType.PLANK,
-  BlockType.LEAVES,
-  BlockType.GLASS,
-  BlockType.BRICK,
-];
