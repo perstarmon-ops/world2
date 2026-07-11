@@ -89,10 +89,23 @@ targetOutline.visible = false;
 scene.add(targetOutline);
 
 app.addEventListener("click", () => {
-  player.controls.lock();
+  if (!ui.isInventoryOpen()) player.controls.lock();
 });
 player.controls.addEventListener("lock", () => ui.setLocked(true));
-player.controls.addEventListener("unlock", () => ui.setLocked(false));
+player.controls.addEventListener("unlock", () => {
+  if (!ui.isInventoryOpen()) ui.setLocked(false);
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "KeyE") return;
+  if (ui.isInventoryOpen()) {
+    ui.toggleInventory();
+    player.controls.lock();
+  } else if (player.controls.isLocked) {
+    ui.toggleInventory();
+    player.controls.unlock();
+  }
+});
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;

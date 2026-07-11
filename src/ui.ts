@@ -1,24 +1,41 @@
 import { BLOCKS } from "./blocks";
-import { Inventory, RESOURCE_SLOT_COUNT, TOOL_SLOTS, TOTAL_SLOT_COUNT } from "./Inventory";
+import { Inventory, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
 
 function rgb([r, g, b]: [number, number, number]): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-const TOOL_ICONS: Record<(typeof TOOL_SLOTS)[number], string> = {
+const TOOL_ICONS: Record<Tool, string> = {
   pickaxe: "⛏",
   axe: "🪓",
   shovel: "♠",
   sword: "🗡",
 };
 
+function buildSlotEl(key: number, onClick: () => void): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "vc-slot vc-slot-empty";
+  el.innerHTML = `
+    <div class="vc-tool-icon"></div>
+    <div class="vc-swatch"></div>
+    <div class="vc-count"></div>
+    <div class="vc-key">${key}</div>
+  `;
+  el.addEventListener("click", onClick);
+  return el;
+}
+
 export class UI {
-  private readonly slotEls: HTMLDivElement[] = [];
+  private readonly hotbarEls: HTMLDivElement[] = [];
+  private readonly invEls: HTMLDivElement[] = [];
   private readonly instructions: HTMLDivElement;
+  private readonly inventoryPanel: HTMLDivElement;
   private readonly debugEl: HTMLDivElement;
   private readonly clockEl: HTMLDivElement;
   private readonly miningBar: HTMLDivElement;
   private readonly miningFill: HTMLDivElement;
+  private inventoryOpen = false;
+  private pickedSlot: number | null = null;
 
   constructor(root: HTMLElement, private readonly inventory: Inventory) {
     const style = document.createElement("style");
@@ -35,32 +52,27 @@ export class UI {
 
     const hotbar = document.createElement("div");
     hotbar.className = "vc-hotbar";
-
-    TOOL_SLOTS.forEach((tool, i) => {
-      const toolSlot = document.createElement("div");
-      toolSlot.className = "vc-slot";
-      toolSlot.innerHTML = `
-        <div class="vc-tool-icon">${TOOL_ICONS[tool]}</div>
-        <div class="vc-key">${i + 1}</div>
-      `;
-      toolSlot.addEventListener("click", () => this.inventory.select(i));
-      hotbar.appendChild(toolSlot);
-      this.slotEls.push(toolSlot);
-    });
-
-    for (let i = 0; i < RESOURCE_SLOT_COUNT; i++) {
-      const slot = document.createElement("div");
-      slot.className = "vc-slot vc-slot-empty";
-      slot.innerHTML = `
-        <div class="vc-swatch"></div>
-        <div class="vc-count"></div>
-        <div class="vc-key">${i + TOOL_SLOTS.length + 1}</div>
-      `;
-      slot.addEventListener("click", () => this.inventory.select(i + TOOL_SLOTS.length));
-      hotbar.appendChild(slot);
-      this.slotEls.push(slot);
+    for (let i = 0; i < TOTAL_SLOT_COUNT; i++) {
+      const el = buildSlotEl(i + 1, () => this.inventory.select(i));
+      hotbar.appendChild(el);
+      this.hotbarEls.push(el);
     }
     root.appendChild(hotbar);
+
+    this.inventoryPanel = document.createElement("div");
+    this.inventoryPanel.className = "vc-inventory vc-hidden";
+    this.inventoryPanel.innerHTML = `<h2>Inventory</h2><p>Click a slot, then click another to swap. Press <b>E</b> to close.</p>`;
+    const grid = document.createElement("div");
+    grid.className = "vc-inventory-grid";
+    for (let i = 0; i < TOTAL_SLOT_COUNT; i++) {
+      const el = buildSlotEl(i + 1, () => this.onInventorySlotClick(i));
+      el.classList.add("vc-inv-slot");
+      grid.appendChild(el);
+      this.invEls.push(el);
+    }
+    this.inventoryPanel.appendChild(grid);
+    this.inventoryPanel.addEventListener("click", (e) => e.stopPropagation());
+    root.appendChild(this.inventoryPanel);
 
     this.instructions = document.createElement("div");
     this.instructions.className = "vc-instructions";
@@ -70,7 +82,7 @@ export class UI {
       <ul>
         <li><b>WASD</b> move &nbsp; <b>Space</b> jump &nbsp; <b>Shift</b> sprint/dive</li>
         <li><b>Mouse</b> look &nbsp; <b>Hold left click</b> mine &nbsp; <b>Right click</b> place</li>
-        <li><b>1-9</b> select slot &nbsp; <b>Esc</b> release mouse</li>
+        <li><b>1-9</b> select slot &nbsp; <b>E</b> inventory &nbsp; <b>Esc</b> release mouse</li>
         <li>Pickaxe (1) speeds up stone, axe (2) speeds up wood/leaves, shovel (3) speeds up dirt</li>
         <li>Sword (4) attacks instead of mining - kill a pig or cow for meat</li>
         <li>Zombies wander the world and will chase you if you get close</li>
@@ -97,27 +109,66 @@ export class UI {
     this.refreshInventory();
   }
 
-  /** Re-reads the inventory state and repaints the hotbar; cheap enough to call every frame. */
+  private onInventorySlotClick(index: number): void {
+    if (this.pickedSlot === null) {
+      this.pickedSlot = index;
+    } else if (this.pickedSlot === index) {
+      this.pickedSlot = null;
+    } else {
+      this.inventory.swap(this.pickedSlot, index);
+      this.pickedSlot = null;
+    }
+    this.refreshInventory();
+  }
+
+  /** Opens/closes the inventory screen. Returns the new open state. */
+  toggleInventory(): boolean {
+    this.inventoryOpen = !this.inventoryOpen;
+    this.pickedSlot = null;
+    this.inventoryPanel.classList.toggle("vc-hidden", !this.inventoryOpen);
+    this.refreshInventory();
+    return this.inventoryOpen;
+  }
+
+  isInventoryOpen(): boolean {
+    return this.inventoryOpen;
+  }
+
+  /** Re-reads the inventory state and repaints the hotbar/inventory screen; cheap enough to call every frame. */
   refreshInventory(): void {
     const selected = this.inventory.getSelectedIndex();
-    const resourceSlots = this.inventory.getResourceSlots();
 
-    this.slotEls.forEach((el, i) => el.classList.toggle("vc-selected", i === selected));
+    for (let i = 0; i < TOTAL_SLOT_COUNT; i++) {
+      const slotData = this.inventory.getSlot(i);
+      this.paintSlot(this.hotbarEls[i], slotData, i === selected);
+      this.paintSlot(this.invEls[i], slotData, i === selected, i === this.pickedSlot);
+    }
+  }
 
-    resourceSlots.forEach((slot, i) => {
-      const el = this.slotEls[i + TOOL_SLOTS.length];
-      const swatch = el.querySelector<HTMLDivElement>(".vc-swatch")!;
-      const count = el.querySelector<HTMLDivElement>(".vc-count")!;
-      if (slot) {
-        el.classList.remove("vc-slot-empty");
-        swatch.style.background = rgb(BLOCKS[slot.block].color);
-        count.textContent = String(slot.count);
-      } else {
-        el.classList.add("vc-slot-empty");
-        swatch.style.background = "";
-        count.textContent = "";
-      }
-    });
+  private paintSlot(el: HTMLDivElement, slot: ReturnType<Inventory["getSlot"]>, selected: boolean, picked = false): void {
+    const icon = el.querySelector<HTMLDivElement>(".vc-tool-icon")!;
+    const swatch = el.querySelector<HTMLDivElement>(".vc-swatch")!;
+    const count = el.querySelector<HTMLDivElement>(".vc-count")!;
+
+    el.classList.toggle("vc-selected", selected);
+    el.classList.toggle("vc-picked", picked);
+
+    if (slot?.kind === "tool") {
+      el.classList.remove("vc-slot-empty");
+      icon.textContent = TOOL_ICONS[slot.tool];
+      swatch.style.background = "";
+      count.textContent = "";
+    } else if (slot?.kind === "resource") {
+      el.classList.remove("vc-slot-empty");
+      icon.textContent = "";
+      swatch.style.background = rgb(BLOCKS[slot.block].color);
+      count.textContent = String(slot.count);
+    } else {
+      el.classList.add("vc-slot-empty");
+      icon.textContent = "";
+      swatch.style.background = "";
+      count.textContent = "";
+    }
   }
 
   setLocked(locked: boolean): void {
@@ -211,6 +262,10 @@ const CSS = `
   border-color: #fff;
   box-shadow: 0 0 8px rgba(255,255,255,0.8);
 }
+.vc-slot.vc-picked {
+  border-color: #ffd24d;
+  box-shadow: 0 0 10px rgba(255,210,77,0.9);
+}
 .vc-slot-empty {
   opacity: 0.45;
 }
@@ -280,6 +335,47 @@ const CSS = `
   font-size: 14px;
   opacity: 0.85;
   line-height: 1.8;
+}
+.vc-inventory {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  z-index: 25;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.vc-inventory.vc-hidden {
+  display: none;
+}
+.vc-inventory h2 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  letter-spacing: 1px;
+}
+.vc-inventory p {
+  margin: 0 0 20px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+.vc-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 64px);
+  gap: 10px;
+}
+.vc-inv-slot {
+  width: 64px;
+  height: 64px;
+}
+.vc-inv-slot .vc-tool-icon {
+  font-size: 30px;
+}
+.vc-inv-slot .vc-count {
+  font-size: 14px;
 }
 .vc-debug {
   position: fixed;
