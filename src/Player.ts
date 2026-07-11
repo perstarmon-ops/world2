@@ -209,6 +209,13 @@ export class Player {
     this.syncCamera();
   }
 
+  /** Shoves the player by (dx, dz), same collision-checked stepping as normal movement - used by mobs bumping into the player. */
+  push(dx: number, dz: number): void {
+    this.moveAxis("x", dx);
+    this.moveAxis("z", dz);
+    this.syncCamera();
+  }
+
   getEyePosition(): THREE.Vector3 {
     return this.controls.object.position;
   }

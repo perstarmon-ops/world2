@@ -157,10 +157,10 @@ function animate(): void {
   if (inNether) {
     scene.background = NETHER_SKY;
     (scene.fog as THREE.Fog).color.copy(NETHER_SKY);
-    netherAnimals.update(dt, player.position, 0);
+    netherAnimals.update(dt, player, 0);
   } else {
     dayNight.update(dt, camera.position);
-    overworldAnimals.update(dt, player.position, dayNight.getDaylight());
+    overworldAnimals.update(dt, player, dayNight.getDaylight());
   }
 
   portalCooldown = Math.max(0, portalCooldown - dt);

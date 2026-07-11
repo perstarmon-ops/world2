@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { BlockType } from "./blocks";
 import { Mob, MobKind } from "./Mob";
+import { Player } from "./Player";
 import { SEA_LEVEL, World } from "./World";
 
 const RESPAWN_INTERVAL = 20;
@@ -9,6 +10,10 @@ const NIGHT_DAYLIGHT_THRESHOLD = 0.5;
 const SPAWN_ATTEMPTS_PER_MOB = 40;
 const MOB_HIT_RADIUS = 0.6;
 const MOB_CENTER_HEIGHT = 0.4;
+/** Kinds that physically shove the player away instead of overlapping them. */
+const PUSHY_KINDS: MobKind[] = ["zombie", "piglin", "hoglin"];
+/** Combined horizontal clearance kept between a pushy mob and the player. */
+const PUSH_RADIUS = 0.9;
 
 export interface MobSpawnConfig {
   kind: MobKind;
@@ -86,9 +91,10 @@ export class AnimalManager {
     }
   }
 
-  update(dt: number, playerPosition: THREE.Vector3, daylight: number): void {
+  update(dt: number, player: Player, daylight: number): void {
     for (const mob of this.mobs) {
-      mob.update(dt, this.world, playerPosition);
+      mob.update(dt, this.world, player.position);
+      if (PUSHY_KINDS.includes(mob.kind)) this.pushPlayerAway(mob, player);
     }
 
     const isNight = daylight < NIGHT_DAYLIGHT_THRESHOLD;
@@ -101,6 +107,18 @@ export class AnimalManager {
         if (count < config.maxCount) this.spawnKind(config.kind, 1);
       }
     }
+  }
+
+  /** Shoves the player back if a pushy mob has walked into their space, instead of letting the two overlap. */
+  private pushPlayerAway(mob: Mob, player: Player): void {
+    const dx = player.position.x - mob.position.x;
+    const dz = player.position.z - mob.position.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist >= PUSH_RADIUS) return;
+    // Exact overlap has no defined direction - fall back to a fixed nudge so it can't deadlock.
+    const [ux, uz] = dist < 1e-4 ? [1, 0] : [dx / dist, dz / dist];
+    const overlap = PUSH_RADIUS - dist;
+    player.push(ux * overlap, uz * overlap);
   }
 
   /** Kills the nearest mob along the ray within reach, if any; returns its kind, or null if nothing was hit. */
