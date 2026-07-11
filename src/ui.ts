@@ -85,6 +85,7 @@ export class UI {
     for (let i = HOTBAR_SLOT_COUNT; i < TOTAL_SLOT_COUNT; i++) {
       const el = buildSlotEl(i + 1, () => this.onInventorySlotClick(i));
       el.classList.add("vc-inv-slot");
+      this.wireDrag(el, i);
       storageGrid.appendChild(el);
       this.invEls[i] = el;
     }
@@ -95,6 +96,7 @@ export class UI {
     for (let i = 0; i < HOTBAR_SLOT_COUNT; i++) {
       const el = buildSlotEl(i + 1, () => this.onInventorySlotClick(i));
       el.classList.add("vc-inv-slot");
+      this.wireDrag(el, i);
       hotbarGrid.appendChild(el);
       this.invEls[i] = el;
     }
@@ -177,6 +179,28 @@ export class UI {
       this.pickedSlot = null;
     }
     this.refreshInventory();
+  }
+
+  /** Lets a slot be picked up and dragged onto another to swap them, as an alternative to click-then-click. */
+  private wireDrag(el: HTMLDivElement, index: number): void {
+    el.draggable = true;
+    el.addEventListener("dragstart", (e) => {
+      e.dataTransfer?.setData("text/plain", String(index));
+      this.pickedSlot = index;
+      this.refreshInventory();
+    });
+    el.addEventListener("dragover", (e) => e.preventDefault());
+    el.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const fromIndex = Number(e.dataTransfer?.getData("text/plain"));
+      if (!Number.isNaN(fromIndex) && fromIndex !== index) this.inventory.swap(fromIndex, index);
+      this.pickedSlot = null;
+      this.refreshInventory();
+    });
+    el.addEventListener("dragend", () => {
+      this.pickedSlot = null;
+      this.refreshInventory();
+    });
   }
 
   /** Opens/closes the inventory screen. Returns the new open state. */
