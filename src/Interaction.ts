@@ -12,6 +12,8 @@ import { World } from "./World";
 const REACH = 6;
 const WATER_MINING_SPEED = 0.35;
 const TOOL_BONUS_SPEED = 2;
+/** Bare-handed mining (no tool selected) works, just slower than any tool. */
+const HAND_MINING_SPEED = 0.6;
 
 /** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. The sword can't mine at all. */
 const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
@@ -178,7 +180,6 @@ export class Interaction {
     if (
       !this.isLeftDown ||
       !hit ||
-      !tool ||
       tool === "sword" ||
       !BLOCKS[this.world.getBlock(hit.block.x, hit.block.y, hit.block.z)].breakable
     ) {
@@ -195,7 +196,11 @@ export class Interaction {
     const blockType = this.world.getBlock(hit.block.x, hit.block.y, hit.block.z);
     const hardness = BLOCKS[blockType].hardness;
     let speed = this.player.isInWater() ? WATER_MINING_SPEED : 1;
-    if (TOOL_BONUS_BLOCKS[tool].includes(blockType)) speed *= TOOL_BONUS_SPEED;
+    if (!tool) {
+      speed *= HAND_MINING_SPEED;
+    } else if (TOOL_BONUS_BLOCKS[tool].includes(blockType)) {
+      speed *= TOOL_BONUS_SPEED;
+    }
     this.miningProgress += dt * speed;
 
     if (this.miningProgress >= hardness) {
