@@ -91,7 +91,12 @@ export class Interaction {
     const hit = this.raycast();
     const hoverBlock = hit ? hit.block : null;
 
-    if (!this.isLeftDown || !hit || !BLOCKS[this.world.getBlock(hit.block.x, hit.block.y, hit.block.z)].breakable) {
+    if (
+      !this.isLeftDown ||
+      !hit ||
+      !this.inventory.isToolSelected() ||
+      !BLOCKS[this.world.getBlock(hit.block.x, hit.block.y, hit.block.z)].breakable
+    ) {
       this.miningTarget = null;
       this.miningProgress = 0;
       return { mining: false, progress: 0, targetBlock: hoverBlock };

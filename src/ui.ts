@@ -61,7 +61,7 @@ export class UI {
         <li><b>WASD</b> move &nbsp; <b>Space</b> jump &nbsp; <b>Shift</b> sprint/dive</li>
         <li><b>Mouse</b> look &nbsp; <b>Hold left click</b> mine &nbsp; <b>Right click</b> place</li>
         <li><b>1-9</b> select slot &nbsp; <b>Esc</b> release mouse</li>
-        <li>Mine blocks with your pickaxe to collect them, then place what you've mined</li>
+        <li>Select the pickaxe (slot 1) to mine; select a mined block to place it</li>
       </ul>
     `;
     root.appendChild(this.instructions);
