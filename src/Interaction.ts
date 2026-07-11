@@ -35,6 +35,8 @@ const ANIMAL_DROPS: Partial<Record<MobKind, BlockType>> = {
   goat: BlockType.MEAT,
   chicken: BlockType.MEAT,
   sheep: BlockType.WOOL,
+  hoglin: BlockType.MEAT,
+  piglin: BlockType.GOLD,
 };
 
 export interface InteractionState {
@@ -57,7 +59,7 @@ export class Interaction {
     private mesher: ChunkMesher,
     private readonly player: Player,
     private readonly inventory: Inventory,
-    private readonly animals: AnimalManager,
+    private animals: AnimalManager,
     domElement: HTMLElement,
   ) {
     const doc = domElement.ownerDocument;
@@ -151,10 +153,11 @@ export class Interaction {
     return raycastVoxels(this.world, origin, direction, REACH);
   }
 
-  /** Switches which World/ChunkMesher this player mines and places against, e.g. when stepping through a portal. */
-  setDimension(world: World, mesher: ChunkMesher): void {
+  /** Switches which World/ChunkMesher/AnimalManager this player interacts with, e.g. when stepping through a portal. */
+  setDimension(world: World, mesher: ChunkMesher, animals: AnimalManager): void {
     this.world = world;
     this.mesher = mesher;
+    this.animals = animals;
     this.resetMining();
   }
 

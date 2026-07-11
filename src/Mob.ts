@@ -2,13 +2,15 @@ import * as THREE from "three";
 import { BlockType } from "./blocks";
 import { World, SEA_LEVEL } from "./World";
 
-export type MobKind = "pig" | "cow" | "sheep" | "goat" | "chicken" | "zombie";
+export type MobKind = "pig" | "cow" | "sheep" | "goat" | "chicken" | "zombie" | "piglin" | "hoglin";
 
 const WANDER_SPEED = 1.3;
 const LEG_SWING_SPEED = 6;
 const LEG_SWING_AMOUNT = 0.5;
 const ZOMBIE_CHASE_RADIUS = 10;
 const ZOMBIE_CHASE_SPEED = 2.2;
+/** Passive-mob ground checks require dry land above SEA_LEVEL; the nether has no sea level to speak of. */
+const NETHER_KINDS: MobKind[] = ["piglin", "hoglin"];
 
 function buildPig(): { group: THREE.Group; legs: THREE.Mesh[] } {
   const group = new THREE.Group();
@@ -240,12 +242,95 @@ function buildZombie(): { group: THREE.Group; legs: THREE.Mesh[] } {
   return { group, legs };
 }
 
+function buildPiglin(): { group: THREE.Group; legs: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xdba493 });
+  const clothMat = new THREE.MeshLambertMaterial({ color: 0x5a4a3a });
+  const goldMat = new THREE.MeshLambertMaterial({ color: 0xdcb32a });
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.42), skinMat);
+  head.position.set(0, 1.6, 0);
+  group.add(head);
+
+  const tuskGeom = new THREE.BoxGeometry(0.06, 0.14, 0.06);
+  for (const x of [-0.1, 0.1]) {
+    const tusk = new THREE.Mesh(tuskGeom, goldMat);
+    tusk.position.set(x, 1.45, 0.2);
+    group.add(tusk);
+  }
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.28), clothMat);
+  body.position.set(0, 1.15, 0);
+  group.add(body);
+
+  const armGeom = new THREE.BoxGeometry(0.15, 0.65, 0.15);
+  armGeom.translate(0, -0.325, 0);
+  for (const x of [-0.32, 0.32]) {
+    const arm = new THREE.Mesh(armGeom, skinMat);
+    arm.position.set(x, 1.5, 0);
+    group.add(arm);
+  }
+
+  const legs: THREE.Mesh[] = [];
+  const legGeom = new THREE.BoxGeometry(0.18, 0.8, 0.18);
+  legGeom.translate(0, -0.4, 0);
+  for (const x of [-0.13, 0.13]) {
+    const leg = new THREE.Mesh(legGeom, clothMat);
+    leg.position.set(x, 0.8, 0);
+    group.add(leg);
+    legs.push(leg);
+  }
+
+  return { group, legs };
+}
+
+function buildHoglin(): { group: THREE.Group; legs: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x8a6a5a });
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x6e5347 });
+  const tuskMat = new THREE.MeshLambertMaterial({ color: 0xe8e0c8 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 1.3), bodyMat);
+  body.position.y = 0.85;
+  group.add(body);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.5, 0.5), bodyMat);
+  head.position.set(0, 0.85, 0.85);
+  group.add(head);
+
+  const tuskGeom = new THREE.BoxGeometry(0.08, 0.08, 0.3);
+  for (const x of [-0.15, 0.15]) {
+    const tusk = new THREE.Mesh(tuskGeom, tuskMat);
+    tusk.position.set(x, 0.65, 1.15);
+    group.add(tusk);
+  }
+
+  const legs: THREE.Mesh[] = [];
+  const legPositions: [number, number][] = [
+    [0.3, 0.5],
+    [-0.3, 0.5],
+    [0.3, -0.5],
+    [-0.3, -0.5],
+  ];
+  for (const [x, z] of legPositions) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.55, 0.24), legMat);
+    leg.geometry.translate(0, -0.275, 0);
+    leg.position.set(x, 0.55, z);
+    group.add(leg);
+    legs.push(leg);
+  }
+
+  return { group, legs };
+}
+
 function buildModel(kind: MobKind): { group: THREE.Group; legs: THREE.Mesh[] } {
   if (kind === "pig") return buildPig();
   if (kind === "cow") return buildCow();
   if (kind === "sheep") return buildSheep();
   if (kind === "goat") return buildGoat();
   if (kind === "chicken") return buildChicken();
+  if (kind === "piglin") return buildPiglin();
+  if (kind === "hoglin") return buildHoglin();
   return buildZombie();
 }
 
@@ -278,7 +363,8 @@ export class Mob {
   private isWalkable(world: World, x: number, z: number): boolean {
     if (!world.inBounds(x, 0, z)) return false;
     const height = world.heightAt(Math.floor(x), Math.floor(z));
-    if (height <= SEA_LEVEL) return false;
+    if (!NETHER_KINDS.includes(this.kind) && height <= SEA_LEVEL) return false;
+    if (height <= 0) return false;
     return world.getBlock(Math.floor(x), height - 1, Math.floor(z)) !== BlockType.WATER;
   }
 
@@ -286,7 +372,7 @@ export class Mob {
     let speed = WANDER_SPEED;
     let chasing = false;
 
-    if (this.kind === "zombie" && playerPosition) {
+    if ((this.kind === "zombie" || this.kind === "piglin") && playerPosition) {
       const dx = playerPosition.x - this.position.x;
       const dz = playerPosition.z - this.position.z;
       if (dx * dx + dz * dz < ZOMBIE_CHASE_RADIUS * ZOMBIE_CHASE_RADIUS) {

@@ -24,6 +24,8 @@ export enum BlockType {
   OBSIDIAN = 22,
   PORTAL = 23,
   NETHERRACK = 24,
+  MUSHROOM_STEM = 25,
+  MUSHROOM_CAP = 26,
 }
 
 export interface BlockInfo {
@@ -68,4 +70,6 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.OBSIDIAN]: { name: "Obsidian", color: [38, 20, 54], solid: true, transparent: false, placeable: true, breakable: true, hardness: 3.0 },
   [BlockType.PORTAL]: { name: "Portal", color: [160, 62, 224], solid: false, transparent: true, placeable: false, breakable: false, hardness: 0 },
   [BlockType.NETHERRACK]: { name: "Netherrack", color: [111, 46, 40], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.9 },
+  [BlockType.MUSHROOM_STEM]: { name: "Mushroom Stem", color: [223, 214, 190], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
+  [BlockType.MUSHROOM_CAP]: { name: "Red Mushroom Cap", color: [178, 32, 32], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
 };

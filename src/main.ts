@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { AnimalManager } from "./AnimalManager";
+import { AnimalManager, NETHER_SPAWNS } from "./AnimalManager";
 import { BlockType } from "./blocks";
 import { ChunkMesher } from "./ChunkMesher";
 import { DayNightCycle } from "./DayNightCycle";
@@ -67,6 +67,8 @@ const nether = new World(4242, "nether");
 const netherMesher = new ChunkMesher(nether, scene);
 netherMesher.buildAll();
 netherMesher.setVisible(false);
+const netherAnimals = new AnimalManager(nether, scene, [BlockType.NETHERRACK], NETHER_SPAWNS, false);
+netherAnimals.setActive(false);
 
 const NETHER_SKY = new THREE.Color(0x2a0f0a);
 
@@ -92,17 +94,18 @@ let portalCooldown = 0;
 const PORTAL_COOLDOWN_SECONDS = 2;
 
 /** Swaps which dimension the player, interaction, mesher visibility, and animals target. */
-function enterDimension(next: World, nextMesher: ChunkMesher, goingToNether: boolean): void {
+function enterDimension(next: World, nextMesher: ChunkMesher, nextAnimals: AnimalManager, goingToNether: boolean): void {
   const spawn = next.getPortalPosition();
   if (!spawn) return;
 
   player.setWorld(next);
   player.teleportTo(spawn[0], spawn[1], spawn[2]);
-  interaction.setDimension(next, nextMesher);
+  interaction.setDimension(next, nextMesher, nextAnimals);
 
   overworldMesher.setVisible(!goingToNether);
   netherMesher.setVisible(goingToNether);
   overworldAnimals.setActive(!goingToNether);
+  netherAnimals.setActive(goingToNether);
 
   inNether = goingToNether;
   portalCooldown = PORTAL_COOLDOWN_SECONDS;
@@ -154,6 +157,7 @@ function animate(): void {
   if (inNether) {
     scene.background = NETHER_SKY;
     (scene.fog as THREE.Fog).color.copy(NETHER_SKY);
+    netherAnimals.update(dt, player.position, 0);
   } else {
     dayNight.update(dt, camera.position);
     overworldAnimals.update(dt, player.position, dayNight.getDaylight());
@@ -165,8 +169,8 @@ function animate(): void {
     const p = player.position;
     const block = activeWorld.getBlock(Math.floor(p.x), Math.floor(p.y + 0.9), Math.floor(p.z));
     if (block === BlockType.PORTAL) {
-      if (inNether) enterDimension(overworld, overworldMesher, false);
-      else enterDimension(nether, netherMesher, true);
+      if (inNether) enterDimension(overworld, overworldMesher, overworldAnimals, false);
+      else enterDimension(nether, netherMesher, netherAnimals, true);
     }
   }
 

@@ -231,6 +231,7 @@ export class World {
     const noise2D = createNoise2D(mulberry32(this.seed));
     const detail2D = createNoise2D(mulberry32(this.seed + 1));
     const spikeRand = mulberry32(this.seed + 2);
+    const mushroomRand = mulberry32(this.seed + 3);
     const baseHeight = 14;
 
     for (let x = 0; x < this.sizeX; x++) {
@@ -262,10 +263,46 @@ export class World {
       }
     }
 
+    // Scatter giant red mushrooms.
+    const mushroomSpacing = 14;
+    for (let cx = 3; cx < this.sizeX - 3; cx += mushroomSpacing) {
+      for (let cz = 3; cz < this.sizeZ - 3; cz += mushroomSpacing) {
+        if (mushroomRand() > 0.5) continue;
+        const x = cx + Math.floor(mushroomRand() * mushroomSpacing);
+        const z = cz + Math.floor(mushroomRand() * mushroomSpacing);
+        if (x < 4 || x >= this.sizeX - 4 || z < 4 || z >= this.sizeZ - 4) continue;
+        const groundY = this.heightAt(x, z);
+        this.buildGiantMushroom(x, groundY, z, mushroomRand);
+      }
+    }
+
     const centerX = Math.floor(this.sizeX / 2);
     const centerZ = Math.floor(this.sizeZ / 2);
     const spot = this.findBuildSpot(centerX, centerZ, 4, 1, 0);
     if (spot) this.buildPortal(spot[0], spot[1]);
+  }
+
+  /** A thick stem topped with a wide domed red cap. */
+  private buildGiantMushroom(x: number, y: number, z: number, rand: () => number): void {
+    const stemHeight = 5 + Math.floor(rand() * 3);
+    for (let i = 0; i < stemHeight; i++) {
+      this.setBlock(x, y + i, z, BlockType.MUSHROOM_STEM);
+    }
+    const capY = y + stemHeight;
+    const radius = 3;
+    for (let dx = -radius; dx <= radius; dx++) {
+      for (let dz = -radius; dz <= radius; dz++) {
+        if (Math.hypot(dx, dz) > radius) continue;
+        for (let dy = 0; dy <= 1; dy++) {
+          const bx = x + dx;
+          const by = capY + dy;
+          const bz = z + dz;
+          if (this.getBlock(bx, by, bz) === BlockType.AIR) {
+            this.setBlock(bx, by, bz, BlockType.MUSHROOM_CAP);
+          }
+        }
+      }
+    }
   }
 
   /** Builds a 4-wide x5-tall obsidian portal frame with a 2x3 glowing portal interior. */

@@ -116,8 +116,23 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.OBSIDIAN, paintObsidian(), false);
   makeMat(BlockType.PORTAL, paintPortal(), true, 0.85);
   makeMat(BlockType.NETHERRACK, paintTexture(BLOCKS[BlockType.NETHERRACK].color, 21, { grain: 26 }), false);
+  makeMat(BlockType.MUSHROOM_STEM, paintTexture(BLOCKS[BlockType.MUSHROOM_STEM].color, 22, { grain: 8 }), false);
+  makeMat(BlockType.MUSHROOM_CAP, paintMushroomCap(), false);
 
   return materials;
+}
+
+function paintMushroomCap(): HTMLCanvasElement {
+  const canvas = paintTexture(BLOCKS[BlockType.MUSHROOM_CAP].color, 23, { grain: 12 });
+  const ctx = canvas.getContext("2d")!;
+  const rand = mulberry32(124);
+  for (let i = 0; i < 10; i++) {
+    const x = Math.floor(rand() * (TEXTURE_SIZE - 1));
+    const y = Math.floor(rand() * (TEXTURE_SIZE - 1));
+    ctx.fillStyle = "rgba(238, 232, 214, 0.9)";
+    ctx.fillRect(x, y, 2, 2);
+  }
+  return canvas;
 }
 
 function paintObsidian(): HTMLCanvasElement {
