@@ -8,6 +8,8 @@ export const WORLD_CHUNKS_Z = 8;
 export const WORLD_SIZE_X = CHUNK_SIZE * WORLD_CHUNKS_X;
 export const WORLD_SIZE_Z = CHUNK_SIZE * WORLD_CHUNKS_Z;
 export const SEA_LEVEL = 17;
+const DIAMOND_MAX_Y = 14;
+const DIAMOND_CHANCE = 0.0015;
 
 function mulberry32(seed: number): () => number {
   let a = seed;
@@ -113,6 +115,7 @@ export class World {
     const noise2D = createNoise2D(mulberry32(this.seed));
     const detail2D = createNoise2D(mulberry32(this.seed + 1));
     const treeRand = mulberry32(this.seed + 2);
+    const oreRand = mulberry32(this.seed + 3);
 
     for (let x = 0; x < this.sizeX; x++) {
       for (let z = 0; z < this.sizeZ; z++) {
@@ -125,7 +128,7 @@ export class World {
         for (let y = 0; y < this.height; y++) {
           let type = BlockType.AIR;
           if (y < height - 4) {
-            type = BlockType.STONE;
+            type = y < DIAMOND_MAX_Y && oreRand() < DIAMOND_CHANCE ? BlockType.DIAMOND_ORE : BlockType.STONE;
           } else if (y < height - 1) {
             type = BlockType.DIRT;
           } else if (y === height - 1) {

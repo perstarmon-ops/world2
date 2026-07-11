@@ -103,6 +103,8 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.GLASS, paintGlass(), true, 0.4);
   makeMat(BlockType.BRICK, paintBrick(), false);
   makeMat(BlockType.MEAT, paintTexture(BLOCKS[BlockType.MEAT].color, 11, { grain: 26 }), false);
+  makeMat(BlockType.DIAMOND_ORE, paintDiamondOre(), false);
+  makeMat(BlockType.DIAMOND, paintTexture(BLOCKS[BlockType.DIAMOND].color, 13, { grain: 14 }), false);
 
   return materials;
 }
@@ -176,6 +178,32 @@ function paintGlass(): HTMLCanvasElement {
   ctx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
   ctx.strokeStyle = "rgba(255,255,255,0.6)";
   ctx.strokeRect(0.5, 0.5, TEXTURE_SIZE - 1, TEXTURE_SIZE - 1);
+  return canvas;
+}
+
+function paintDiamondOre(): HTMLCanvasElement {
+  const stoneColor = BLOCKS[BlockType.STONE].color;
+  const gemColor = BLOCKS[BlockType.DIAMOND].color;
+  const canvas = paintTexture(stoneColor, 12, { grain: 20 });
+  const ctx = canvas.getContext("2d")!;
+  const rand = mulberry32(120);
+
+  const clusterCount = 4 + Math.floor(rand() * 2);
+  for (let c = 0; c < clusterCount; c++) {
+    const cx = Math.floor(rand() * TEXTURE_SIZE);
+    const cy = Math.floor(rand() * TEXTURE_SIZE);
+    const speckles = [
+      [cx, cy],
+      [cx + 1, cy],
+      [cx, cy + 1],
+    ];
+    for (const [sx, sy] of speckles) {
+      if (sx < 0 || sx >= TEXTURE_SIZE || sy < 0 || sy >= TEXTURE_SIZE) continue;
+      const [r, g, b] = shade(gemColor, (rand() - 0.5) * 20);
+      ctx.fillStyle = `rgb(${r | 0}, ${g | 0}, ${b | 0})`;
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+  }
   return canvas;
 }
 

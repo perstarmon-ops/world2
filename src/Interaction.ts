@@ -14,10 +14,15 @@ const TOOL_BONUS_SPEED = 2;
 
 /** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. The sword can't mine at all. */
 const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
-  pickaxe: [BlockType.STONE],
+  pickaxe: [BlockType.STONE, BlockType.DIAMOND_ORE],
   axe: [BlockType.WOOD, BlockType.LEAVES],
   shovel: [BlockType.DIRT],
   sword: [],
+};
+
+/** Blocks that drop a different item than themselves when mined. */
+const MINED_DROPS: Partial<Record<BlockType, BlockType>> = {
+  [BlockType.DIAMOND_ORE]: BlockType.DIAMOND,
 };
 
 export interface InteractionState {
@@ -148,7 +153,7 @@ export class Interaction {
     if (this.miningProgress >= hardness) {
       this.world.setBlock(hit.block.x, hit.block.y, hit.block.z, BlockType.AIR);
       this.mesher.rebuildAround(hit.block.x, hit.block.z);
-      this.inventory.add(blockType);
+      this.inventory.add(MINED_DROPS[blockType] ?? blockType);
       this.miningTarget = null;
       this.miningProgress = 0;
       return { mining: false, progress: 0, targetBlock: null, attacked };

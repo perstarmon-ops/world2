@@ -11,6 +11,8 @@ export enum BlockType {
   GLASS = 9,
   BRICK = 10,
   MEAT = 11,
+  DIAMOND_ORE = 12,
+  DIAMOND = 13,
 }
 
 export interface BlockInfo {
@@ -40,4 +42,6 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.GLASS]: { name: "Glass", color: [210, 235, 240], solid: true, transparent: true, placeable: true, breakable: true, hardness: 0.35 },
   [BlockType.BRICK]: { name: "Brick", color: [150, 78, 61], solid: true, transparent: false, placeable: true, breakable: true, hardness: 1.0 },
   [BlockType.MEAT]: { name: "Meat", color: [186, 92, 84], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
+  [BlockType.DIAMOND_ORE]: { name: "Diamond Ore", color: [120, 122, 126], solid: true, transparent: false, placeable: false, breakable: true, hardness: 1.4 },
+  [BlockType.DIAMOND]: { name: "Diamond", color: [110, 226, 220], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
 };
