@@ -23,6 +23,8 @@ const SWIM_WALK_SPEED = 3.2;
 
 const FLY_SPEED = 6.5;
 const FLY_VERTICAL_SPEED = 6;
+/** Two Space presses within this window toggle flying on/off, like Minecraft creative mode. */
+const DOUBLE_TAP_WINDOW_MS = 350;
 
 /** Falling below this Y (out of the map bounds or through a mined hole) triggers a respawn. */
 const VOID_RESPAWN_Y = -10;
@@ -33,7 +35,9 @@ export class Player {
   private readonly spawnPosition: THREE.Vector3;
   private readonly velocity = new THREE.Vector3();
   private grounded = false;
+  private canFly = false;
   private flying = false;
+  private lastSpaceTapTime = 0;
   private readonly keys = new Set<string>();
 
   constructor(
@@ -49,12 +53,27 @@ export class Player {
     this.position.copy(this.spawnPosition);
     this.syncCamera();
 
-    window.addEventListener("keydown", (e) => this.keys.add(e.code));
+    window.addEventListener("keydown", (e) => {
+      this.keys.add(e.code);
+      if (e.code === "Space" && !e.repeat && this.canFly) this.handleSpaceTap();
+    });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
     // If the window loses focus mid-press (e.g. an OS prompt steals it), the
     // matching keyup never arrives - without this a key could get stuck held
     // forever, which would look like movement silently breaking.
     window.addEventListener("blur", () => this.keys.clear());
+  }
+
+  /** Double-tapping Space toggles flying on/off, like Minecraft creative mode. */
+  private handleSpaceTap(): void {
+    const now = performance.now();
+    if (now - this.lastSpaceTapTime < DOUBLE_TAP_WINDOW_MS) {
+      this.flying = !this.flying;
+      this.velocity.y = 0;
+      this.lastSpaceTapTime = 0;
+    } else {
+      this.lastSpaceTapTime = now;
+    }
   }
 
   /** Shift descends while flying; Ctrl works too in case Shift is intercepted by the OS/browser on some setups. */
@@ -224,8 +243,9 @@ export class Player {
     this.world = world;
   }
 
-  /** Creative mode flies (Space up, Shift down, no gravity); survival keeps normal jump/gravity physics. */
+  /** Creative mode can fly (double-tap Space to toggle, then Space up/Shift down); survival keeps normal jump/gravity physics. */
   setFlying(enabled: boolean): void {
+    this.canFly = enabled;
     this.flying = enabled;
     if (enabled) this.velocity.y = 0;
   }
