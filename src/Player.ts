@@ -186,14 +186,18 @@ export class Player {
     return this.controls.object.position;
   }
 
-  /** True if the given block cell overlaps the player's own bounding box (used to block self-trapping placement). */
-  occupiesBlock(bx: number, by: number, bz: number): boolean {
-    const minX = this.position.x - PLAYER_RADIUS;
-    const maxX = this.position.x + PLAYER_RADIUS;
-    const minY = this.position.y;
-    const maxY = this.position.y + PLAYER_HEIGHT;
-    const minZ = this.position.z - PLAYER_RADIUS;
-    const maxZ = this.position.z + PLAYER_RADIUS;
-    return bx + 1 > minX && bx < maxX && by + 1 > minY && by < maxY && bz + 1 > minZ && bz < maxZ;
+  /**
+   * Pops the player straight up out of any solid block that now overlaps
+   * them (e.g. one they just placed under their own feet). This is what
+   * makes jump-and-place pillaring work: place a block beneath you while
+   * airborne and you land standing on top of it instead of clipping inside.
+   */
+  resolveOverlap(): void {
+    let guard = 0;
+    while (this.aabbCollides(this.position.x, this.position.y, this.position.z) && guard < 64) {
+      this.position.y += 0.05;
+      this.velocity.y = Math.max(this.velocity.y, 0);
+      guard++;
+    }
   }
 }

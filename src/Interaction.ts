@@ -94,11 +94,11 @@ export class Interaction {
     if (!hit) return;
     const { x, y, z } = hit.before;
     if (!this.world.inBounds(x, y, z)) return;
-    if (this.player.occupiesBlock(x, y, z)) return;
 
     if (!this.inventory.consumeSelected()) return;
     this.world.setBlock(x, y, z, blockType);
     this.mesher.rebuildAround(x, z);
+    this.player.resolveOverlap();
   }
 
   private raycast() {
