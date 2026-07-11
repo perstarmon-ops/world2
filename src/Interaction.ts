@@ -8,6 +8,7 @@ import { raycastVoxels } from "./raycast";
 import { World } from "./World";
 
 const REACH = 6;
+const WATER_MINING_SPEED = 0.35;
 
 export interface InteractionState {
   mining: boolean;
@@ -103,7 +104,8 @@ export class Interaction {
 
     const blockType = this.world.getBlock(hit.block.x, hit.block.y, hit.block.z);
     const hardness = BLOCKS[blockType].hardness;
-    this.miningProgress += dt;
+    const speed = this.player.isInWater() ? WATER_MINING_SPEED : 1;
+    this.miningProgress += dt * speed;
 
     if (this.miningProgress >= hardness) {
       this.world.setBlock(hit.block.x, hit.block.y, hit.block.z, BlockType.AIR);

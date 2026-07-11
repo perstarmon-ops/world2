@@ -50,7 +50,9 @@ export function raycastVoxels(
 
   while (traveled <= maxDistance) {
     const block = world.getBlock(x, y, z);
-    if (block !== BlockType.AIR) {
+    // Water is passable for targeting purposes so the player can mine/place
+    // against solid blocks while swimming through or over it.
+    if (block !== BlockType.AIR && block !== BlockType.WATER) {
       return {
         block: new THREE.Vector3(x, y, z),
         before: new THREE.Vector3(x + normal.x, y + normal.y, z + normal.z),
