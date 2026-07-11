@@ -3,14 +3,16 @@ import { BlockType } from "./blocks";
 import { Mob, MobKind } from "./Mob";
 import { SEA_LEVEL, World } from "./World";
 
-const PIG_COUNT = 6;
-const COW_COUNT = 6;
-const SHEEP_COUNT = 6;
-const GOAT_COUNT = 5;
-const CHICKEN_COUNT = 6;
-const ZOMBIE_COUNT = 5;
-const MAX_PER_KIND = 10;
+const PIG_COUNT = 1;
+const COW_COUNT = 1;
+const SHEEP_COUNT = 1;
+const GOAT_COUNT = 1;
+const CHICKEN_COUNT = 1;
+const ZOMBIE_COUNT = 1;
+const MAX_PER_KIND = 1;
 const RESPAWN_INTERVAL = 20;
+/** Below this, DayNightCycle.getDaylight() counts as night - matches the day/night clock icon's 6am-6pm boundary. */
+const NIGHT_DAYLIGHT_THRESHOLD = 0.5;
 const ALL_KINDS: MobKind[] = ["pig", "cow", "sheep", "goat", "chicken", "zombie"];
 const SPAWN_ATTEMPTS_PER_MOB = 40;
 const MOB_HIT_RADIUS = 0.6;
@@ -26,7 +28,7 @@ export class AnimalManager {
     this.spawnKind("sheep", SHEEP_COUNT);
     this.spawnKind("goat", GOAT_COUNT);
     this.spawnKind("chicken", CHICKEN_COUNT);
-    this.spawnKind("zombie", ZOMBIE_COUNT);
+    // Zombies only spawn at night; the world always loads at noon, so none appear yet.
   }
 
   private spawnKind(kind: MobKind, count: number): void {
@@ -57,17 +59,19 @@ export class AnimalManager {
     return this.mobs;
   }
 
-  update(dt: number, playerPosition: THREE.Vector3): void {
+  update(dt: number, playerPosition: THREE.Vector3, daylight: number): void {
     for (const mob of this.mobs) {
       mob.update(dt, this.world, playerPosition);
     }
 
+    const isNight = daylight < NIGHT_DAYLIGHT_THRESHOLD;
     this.respawnTimer += dt;
     if (this.respawnTimer >= RESPAWN_INTERVAL) {
       this.respawnTimer = 0;
       for (const kind of ALL_KINDS) {
+        if (kind === "zombie" && !isNight) continue;
         const count = this.mobs.reduce((n, mob) => n + (mob.kind === kind ? 1 : 0), 0);
-        if (count < MAX_PER_KIND) this.spawnKind(kind, 1);
+        if (count < (kind === "zombie" ? ZOMBIE_COUNT : MAX_PER_KIND)) this.spawnKind(kind, 1);
       }
     }
   }

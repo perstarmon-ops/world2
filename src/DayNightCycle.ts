@@ -56,6 +56,7 @@ function makeGlowSprite(
  */
 export class DayNightCycle {
   private time = 0;
+  private daylight = 1;
   private readonly sunSprite: THREE.Sprite;
   private readonly sunMaterial: THREE.SpriteMaterial;
   private readonly moonSprite: THREE.Sprite;
@@ -84,6 +85,7 @@ export class DayNightCycle {
     this.time += dt;
     const phase = (this.time % this.cycleSeconds) / this.cycleSeconds;
     const daylight = (Math.cos(phase * Math.PI * 2) + 1) / 2;
+    this.daylight = daylight;
 
     const skyColor = DAY_SKY.clone().lerp(NIGHT_SKY, 1 - daylight);
     this.scene.background = skyColor;
@@ -122,6 +124,11 @@ export class DayNightCycle {
     this.moonSprite.position.set(origin.x - ux * SKY_DISTANCE, origin.y - uy * SKY_DISTANCE, origin.z - uz * SKY_DISTANCE);
     this.sunMaterial.opacity = Math.max(0, daylight);
     this.moonMaterial.opacity = Math.max(0, 1 - daylight);
+  }
+
+  /** 1 at noon, 0 at midnight - matches the sinusoidal curve driving sky/light color. */
+  getDaylight(): number {
+    return this.daylight;
   }
 
   /** A 24-hour clock reading where phase 0 (world load) is noon and the halfway point is midnight. */

@@ -123,6 +123,9 @@ export class Interaction {
 
     if (!this.inventory.consumeSelected()) return;
     this.world.setBlock(x, y, z, blockType);
+    if (blockType === BlockType.DOOR_CLOSED && this.world.getBlock(x, y + 1, z) === BlockType.AIR) {
+      this.world.setBlock(x, y + 1, z, BlockType.DOOR_CLOSED);
+    }
     this.mesher.rebuildAround(x, z);
     this.player.resolveOverlap();
   }
@@ -187,6 +190,14 @@ export class Interaction {
 
     if (this.miningProgress >= hardness) {
       this.world.setBlock(hit.block.x, hit.block.y, hit.block.z, BlockType.AIR);
+      if (blockType === BlockType.DOOR_CLOSED || blockType === BlockType.DOOR_OPEN) {
+        for (const ny of [hit.block.y - 1, hit.block.y + 1]) {
+          const neighbor = this.world.getBlock(hit.block.x, ny, hit.block.z);
+          if (neighbor === BlockType.DOOR_CLOSED || neighbor === BlockType.DOOR_OPEN) {
+            this.world.setBlock(hit.block.x, ny, hit.block.z, BlockType.AIR);
+          }
+        }
+      }
       this.mesher.rebuildAround(hit.block.x, hit.block.z);
       this.inventory.add(MINED_DROPS[blockType] ?? blockType);
       this.miningTarget = null;

@@ -122,8 +122,8 @@ function animate(): void {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
   player.update(dt);
-  animals.update(dt, player.position);
   dayNight.update(dt, camera.position);
+  animals.update(dt, player.position, dayNight.getDaylight());
 
   const state = interaction.update(dt);
   toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked, inventory.getSelectedBlock());

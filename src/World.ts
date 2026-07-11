@@ -297,6 +297,10 @@ export class World {
       if (!this.inBounds(x, 0, z)) continue;
       const y = this.heightAt(x, z);
       if (y <= SEA_LEVEL) continue;
+      // Only pave natural ground - never overwrite house walls/doors that
+      // happen to sit a row off from this column's raw terrain height.
+      const surface = this.getBlock(x, y - 1, z);
+      if (surface !== BlockType.GRASS && surface !== BlockType.DIRT && surface !== BlockType.SAND) continue;
       this.setBlock(x, y - 1, z, BlockType.PATH);
     }
   }
