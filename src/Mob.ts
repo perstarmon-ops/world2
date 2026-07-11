@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { BlockType } from "./blocks";
 import { World, SEA_LEVEL } from "./World";
 
-export type MobKind = "pig" | "cow" | "zombie";
+export type MobKind = "pig" | "cow" | "sheep" | "goat" | "chicken" | "zombie";
 
 const WANDER_SPEED = 1.3;
 const LEG_SWING_SPEED = 6;
@@ -89,6 +89,122 @@ function buildCow(): { group: THREE.Group; legs: THREE.Mesh[] } {
   return { group, legs };
 }
 
+function buildSheep(): { group: THREE.Group; legs: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  const woolMat = new THREE.MeshLambertMaterial({ color: 0xf5f0e6 });
+  const headMat = new THREE.MeshLambertMaterial({ color: 0x4a4038 });
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x4a4038 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.55, 0.95), woolMat);
+  body.position.y = 0.7;
+  group.add(body);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.32), headMat);
+  head.position.set(0, 0.68, 0.58);
+  group.add(head);
+
+  const legs: THREE.Mesh[] = [];
+  const legPositions: [number, number][] = [
+    [0.2, 0.34],
+    [-0.2, 0.34],
+    [0.2, -0.34],
+    [-0.2, -0.34],
+  ];
+  for (const [x, z] of legPositions) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 0.15), legMat);
+    leg.geometry.translate(0, -0.2, 0);
+    leg.position.set(x, 0.4, z);
+    group.add(leg);
+    legs.push(leg);
+  }
+
+  return { group, legs };
+}
+
+function buildGoat(): { group: THREE.Group; legs: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xcfc7b4 });
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x9a9282 });
+  const hornMat = new THREE.MeshLambertMaterial({ color: 0x3a352d });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.48, 0.95), bodyMat);
+  body.position.y = 0.62;
+  group.add(body);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.36), bodyMat);
+  head.position.set(0, 0.68, 0.62);
+  group.add(head);
+
+  const hornGeom = new THREE.BoxGeometry(0.06, 0.22, 0.06);
+  hornGeom.translate(0, 0.11, 0);
+  for (const x of [-0.1, 0.1]) {
+    const horn = new THREE.Mesh(hornGeom, hornMat);
+    horn.position.set(x, 0.85, 0.68);
+    horn.rotation.x = -0.4;
+    group.add(horn);
+  }
+
+  const legs: THREE.Mesh[] = [];
+  const legPositions: [number, number][] = [
+    [0.16, 0.36],
+    [-0.16, 0.36],
+    [0.16, -0.36],
+    [-0.16, -0.36],
+  ];
+  for (const [x, z] of legPositions) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.42, 0.14), legMat);
+    leg.geometry.translate(0, -0.21, 0);
+    leg.position.set(x, 0.42, z);
+    group.add(leg);
+    legs.push(leg);
+  }
+
+  return { group, legs };
+}
+
+function buildChicken(): { group: THREE.Group; legs: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xf2f0e8 });
+  const combMat = new THREE.MeshLambertMaterial({ color: 0xc23b3b });
+  const beakMat = new THREE.MeshLambertMaterial({ color: 0xe0a83a });
+  const legMat = new THREE.MeshLambertMaterial({ color: 0xe0a83a });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.3, 0.42), bodyMat);
+  body.position.y = 0.32;
+  group.add(body);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), bodyMat);
+  head.position.set(0, 0.52, 0.2);
+  group.add(head);
+
+  const comb = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.1), combMat);
+  comb.position.set(0, 0.64, 0.2);
+  group.add(comb);
+
+  const beak = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.08), beakMat);
+  beak.position.set(0, 0.5, 0.32);
+  group.add(beak);
+
+  const wingGeom = new THREE.BoxGeometry(0.06, 0.2, 0.28);
+  for (const x of [-0.18, 0.18]) {
+    const wing = new THREE.Mesh(wingGeom, bodyMat);
+    wing.position.set(x, 0.34, 0.02);
+    group.add(wing);
+  }
+
+  const legs: THREE.Mesh[] = [];
+  const legGeom = new THREE.BoxGeometry(0.05, 0.18, 0.05);
+  legGeom.translate(0, -0.09, 0);
+  for (const x of [-0.07, 0.07]) {
+    const leg = new THREE.Mesh(legGeom, legMat);
+    leg.position.set(x, 0.18, 0);
+    group.add(leg);
+    legs.push(leg);
+  }
+
+  return { group, legs };
+}
+
 function buildZombie(): { group: THREE.Group; legs: THREE.Mesh[] } {
   const group = new THREE.Group();
   const skinMat = new THREE.MeshLambertMaterial({ color: 0x4f8a4f });
@@ -127,6 +243,9 @@ function buildZombie(): { group: THREE.Group; legs: THREE.Mesh[] } {
 function buildModel(kind: MobKind): { group: THREE.Group; legs: THREE.Mesh[] } {
   if (kind === "pig") return buildPig();
   if (kind === "cow") return buildCow();
+  if (kind === "sheep") return buildSheep();
+  if (kind === "goat") return buildGoat();
+  if (kind === "chicken") return buildChicken();
   return buildZombie();
 }
 

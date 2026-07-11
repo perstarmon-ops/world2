@@ -5,10 +5,13 @@ import { SEA_LEVEL, World } from "./World";
 
 const PIG_COUNT = 6;
 const COW_COUNT = 6;
+const SHEEP_COUNT = 6;
+const GOAT_COUNT = 5;
+const CHICKEN_COUNT = 6;
 const ZOMBIE_COUNT = 5;
 const MAX_PER_KIND = 10;
 const RESPAWN_INTERVAL = 20;
-const ALL_KINDS: MobKind[] = ["pig", "cow", "zombie"];
+const ALL_KINDS: MobKind[] = ["pig", "cow", "sheep", "goat", "chicken", "zombie"];
 const SPAWN_ATTEMPTS_PER_MOB = 40;
 const MOB_HIT_RADIUS = 0.6;
 const MOB_CENTER_HEIGHT = 0.4;
@@ -20,6 +23,9 @@ export class AnimalManager {
   constructor(private readonly world: World, private readonly scene: THREE.Scene) {
     this.spawnKind("pig", PIG_COUNT);
     this.spawnKind("cow", COW_COUNT);
+    this.spawnKind("sheep", SHEEP_COUNT);
+    this.spawnKind("goat", GOAT_COUNT);
+    this.spawnKind("chicken", CHICKEN_COUNT);
     this.spawnKind("zombie", ZOMBIE_COUNT);
   }
 

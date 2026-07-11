@@ -107,8 +107,38 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.DIAMOND, paintTexture(BLOCKS[BlockType.DIAMOND].color, 13, { grain: 14 }), false);
   makeMat(BlockType.FLOWER_RED, paintFlower(BLOCKS[BlockType.FLOWER_RED].color), true, 1);
   makeMat(BlockType.FLOWER_YELLOW, paintFlower(BLOCKS[BlockType.FLOWER_YELLOW].color), true, 1);
+  makeMat(BlockType.GOLD_ORE, paintGoldOre(), false);
+  makeMat(BlockType.GOLD, paintTexture(BLOCKS[BlockType.GOLD].color, 15, { grain: 14 }), false);
+  makeMat(BlockType.WOOL, paintTexture(BLOCKS[BlockType.WOOL].color, 16, { grain: 22 }), false);
+  makeMat(BlockType.PATH, paintTexture(BLOCKS[BlockType.PATH].color, 17, { horizontalBands: true }), false);
 
   return materials;
+}
+
+function paintGoldOre(): HTMLCanvasElement {
+  const stoneColor = BLOCKS[BlockType.STONE].color;
+  const goldColor = BLOCKS[BlockType.GOLD].color;
+  const canvas = paintTexture(stoneColor, 18, { grain: 20 });
+  const ctx = canvas.getContext("2d")!;
+  const rand = mulberry32(121);
+
+  const clusterCount = 4 + Math.floor(rand() * 2);
+  for (let c = 0; c < clusterCount; c++) {
+    const cx = Math.floor(rand() * TEXTURE_SIZE);
+    const cy = Math.floor(rand() * TEXTURE_SIZE);
+    const speckles = [
+      [cx, cy],
+      [cx + 1, cy],
+      [cx, cy + 1],
+    ];
+    for (const [sx, sy] of speckles) {
+      if (sx < 0 || sx >= TEXTURE_SIZE || sy < 0 || sy >= TEXTURE_SIZE) continue;
+      const [r, g, b] = shade(goldColor, (rand() - 0.5) * 20);
+      ctx.fillStyle = `rgb(${r | 0}, ${g | 0}, ${b | 0})`;
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+  }
+  return canvas;
 }
 
 /** Paints a small stem + petals on an otherwise transparent canvas, for cross-billboard plants. */

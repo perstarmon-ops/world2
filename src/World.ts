@@ -10,6 +10,8 @@ export const WORLD_SIZE_Z = CHUNK_SIZE * WORLD_CHUNKS_Z;
 export const SEA_LEVEL = 17;
 const DIAMOND_MAX_Y = 14;
 const DIAMOND_CHANCE = 0.0015;
+const GOLD_MAX_Y = 22;
+const GOLD_CHANCE = 0.0025;
 
 function mulberry32(seed: number): () => number {
   let a = seed;
@@ -117,6 +119,7 @@ export class World {
     const treeRand = mulberry32(this.seed + 2);
     const oreRand = mulberry32(this.seed + 3);
     const flowerRand = mulberry32(this.seed + 4);
+    const villageRand = mulberry32(this.seed + 5);
 
     for (let x = 0; x < this.sizeX; x++) {
       for (let z = 0; z < this.sizeZ; z++) {
@@ -129,7 +132,13 @@ export class World {
         for (let y = 0; y < this.height; y++) {
           let type = BlockType.AIR;
           if (y < height - 4) {
-            type = y < DIAMOND_MAX_Y && oreRand() < DIAMOND_CHANCE ? BlockType.DIAMOND_ORE : BlockType.STONE;
+            if (y < DIAMOND_MAX_Y && oreRand() < DIAMOND_CHANCE) {
+              type = BlockType.DIAMOND_ORE;
+            } else if (y < GOLD_MAX_Y && oreRand() < GOLD_CHANCE) {
+              type = BlockType.GOLD_ORE;
+            } else {
+              type = BlockType.STONE;
+            }
           } else if (y < height - 1) {
             type = BlockType.DIRT;
           } else if (y === height - 1) {
@@ -174,6 +183,118 @@ export class World {
         const type = flowerRand() < 0.5 ? BlockType.FLOWER_RED : BlockType.FLOWER_YELLOW;
         this.setBlock(x, height, z, type);
       }
+    }
+
+    this.generateVillage(villageRand);
+  }
+
+  /** Builds a small cluster of houses around the spawn point, connected by paths. */
+  private generateVillage(rand: () => number): void {
+    const [baseX, baseZ] = this.findSpawnPoint();
+    const size = 5;
+    const spacing = 9;
+    const offsets: [number, number][] = [
+      [-spacing, -spacing],
+      [spacing, -spacing],
+      [-spacing, spacing],
+      [spacing, spacing],
+      [0, spacing * 2],
+    ];
+
+    const doors: [number, number][] = [];
+    for (const [ox, oz] of offsets) {
+      const spot = this.findHouseSpot(baseX + ox, baseZ + oz, size);
+      if (!spot) continue;
+      const [x, z] = spot;
+      this.buildHouse(x, z, size, rand);
+      doors.push([x + Math.floor(size / 2), z]);
+    }
+
+    for (const [dx, dz] of doors) {
+      this.carvePathSegment(baseX, baseZ, dx, baseZ);
+      this.carvePathSegment(dx, baseZ, dx, dz);
+    }
+  }
+
+  /** Searches an expanding ring around (x, z) for dry, in-bounds land to place a house footprint. */
+  private findHouseSpot(x: number, z: number, size: number): [number, number] | null {
+    for (let ring = 0; ring <= 4; ring++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        for (let dz = -ring; dz <= ring; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== ring) continue;
+          const hx = x + dx * 2;
+          const hz = z + dz * 2;
+          if (!this.inBounds(hx - 1, 0, hz - 1) || !this.inBounds(hx + size, 0, hz + size)) continue;
+          const cx = hx + Math.floor(size / 2);
+          const cz = hz + Math.floor(size / 2);
+          if (this.heightAt(cx, cz) <= SEA_LEVEL) continue;
+          return [hx, hz];
+        }
+      }
+    }
+    return null;
+  }
+
+  private buildHouse(x: number, z: number, size: number, rand: () => number): void {
+    const cx = x + Math.floor(size / 2);
+    const cz = z + Math.floor(size / 2);
+    const groundY = this.heightAt(cx, cz);
+    if (groundY <= SEA_LEVEL) return;
+    const wallHeight = 3 + Math.floor(rand() * 2);
+    const floorY = groundY - 1;
+    const roofY = groundY + wallHeight;
+
+    // Clear any tree parts overlapping the footprint before building.
+    for (let dx = -1; dx <= size; dx++) {
+      for (let dz = -1; dz <= size; dz++) {
+        for (let y = floorY; y <= roofY + 2; y++) {
+          const bx = x + dx;
+          const bz = z + dz;
+          if (!this.inBounds(bx, y, bz)) continue;
+          const b = this.getBlock(bx, y, bz);
+          if (b === BlockType.WOOD || b === BlockType.LEAVES) this.setBlock(bx, y, bz, BlockType.AIR);
+        }
+      }
+    }
+
+    for (let dx = 0; dx < size; dx++) {
+      for (let dz = 0; dz < size; dz++) {
+        this.setBlock(x + dx, floorY, z + dz, BlockType.PLANK);
+      }
+    }
+
+    const doorX = Math.floor(size / 2);
+    const windowZ = Math.floor(size / 2);
+    for (let dy = 0; dy < wallHeight; dy++) {
+      const y = groundY + dy;
+      for (let dx = 0; dx < size; dx++) {
+        for (let dz = 0; dz < size; dz++) {
+          const onEdge = dx === 0 || dx === size - 1 || dz === 0 || dz === size - 1;
+          if (!onEdge) continue;
+          if (dz === 0 && dx === doorX && dy < 2) continue; // doorway
+          const isWindow = dy === 1 && (dx === 0 || dx === size - 1) && dz === windowZ;
+          this.setBlock(x + dx, y, z + dz, isWindow ? BlockType.GLASS : BlockType.PLANK);
+        }
+      }
+    }
+
+    for (let dx = -1; dx <= size; dx++) {
+      for (let dz = -1; dz <= size; dz++) {
+        this.setBlock(x + dx, roofY, z + dz, BlockType.BRICK);
+      }
+    }
+  }
+
+  private carvePathSegment(x0: number, z0: number, x1: number, z1: number): void {
+    const steps = Math.max(Math.abs(x1 - x0), Math.abs(z1 - z0));
+    for (let i = 0; i <= steps; i++) {
+      const t = steps === 0 ? 0 : i / steps;
+      const x = Math.round(x0 + (x1 - x0) * t);
+      const z = Math.round(z0 + (z1 - z0) * t);
+      if (!this.inBounds(x, 0, z)) continue;
+      const y = this.heightAt(x, z);
+      if (y <= SEA_LEVEL) continue;
+      this.setBlock(x, y - 1, z, BlockType.PATH);
     }
   }
 

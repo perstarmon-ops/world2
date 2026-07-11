@@ -15,6 +15,10 @@ export enum BlockType {
   DIAMOND = 13,
   FLOWER_RED = 14,
   FLOWER_YELLOW = 15,
+  GOLD_ORE = 16,
+  GOLD = 17,
+  WOOL = 18,
+  PATH = 19,
 }
 
 export interface BlockInfo {
@@ -50,4 +54,8 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.DIAMOND]: { name: "Diamond", color: [110, 226, 220], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.FLOWER_RED]: { name: "Red Flower", color: [206, 48, 48], solid: false, transparent: true, placeable: true, breakable: true, hardness: 0.1, renderAsCross: true },
   [BlockType.FLOWER_YELLOW]: { name: "Yellow Flower", color: [227, 201, 42], solid: false, transparent: true, placeable: true, breakable: true, hardness: 0.1, renderAsCross: true },
+  [BlockType.GOLD_ORE]: { name: "Gold Ore", color: [188, 168, 110], solid: true, transparent: false, placeable: false, breakable: true, hardness: 1.2 },
+  [BlockType.GOLD]: { name: "Gold", color: [244, 202, 66], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
+  [BlockType.WOOL]: { name: "Wool", color: [235, 232, 224], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
+  [BlockType.PATH]: { name: "Path", color: [176, 150, 105], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.4 },
 };

@@ -21,9 +21,13 @@ const SWIM_SPEED = 3.2;
 const SWIM_ACCEL = 16;
 const SWIM_WALK_SPEED = 3.2;
 
+/** Falling below this Y (out of the map bounds or through a mined hole) triggers a respawn. */
+const VOID_RESPAWN_Y = -10;
+
 export class Player {
   readonly controls: PointerLockControls;
   readonly position = new THREE.Vector3();
+  private readonly spawnPosition: THREE.Vector3;
   private readonly velocity = new THREE.Vector3();
   private grounded = false;
   private readonly keys = new Set<string>();
@@ -37,7 +41,8 @@ export class Player {
 
     const [spawnX, spawnZ] = world.findSpawnPoint();
     const spawnY = world.surfaceHeightAt(spawnX, spawnZ) + 2;
-    this.position.set(spawnX + 0.5, spawnY, spawnZ + 0.5);
+    this.spawnPosition = new THREE.Vector3(spawnX + 0.5, spawnY, spawnZ + 0.5);
+    this.position.copy(this.spawnPosition);
     this.syncCamera();
 
     window.addEventListener("keydown", (e) => this.keys.add(e.code));
@@ -179,7 +184,16 @@ export class Player {
     this.moveAxis("z", moveDir.z);
     this.moveAxis("y", this.velocity.y * dt);
 
+    if (this.position.y < VOID_RESPAWN_Y) this.respawn();
+
     this.syncCamera();
+  }
+
+  /** Sends the player back to their spawn point, e.g. after falling out of the world. */
+  private respawn(): void {
+    this.position.copy(this.spawnPosition);
+    this.velocity.set(0, 0, 0);
+    this.grounded = false;
   }
 
   getEyePosition(): THREE.Vector3 {

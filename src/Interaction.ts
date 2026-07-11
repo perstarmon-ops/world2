@@ -4,6 +4,7 @@ import { AnimalManager } from "./AnimalManager";
 import { BlockType, BLOCKS } from "./blocks";
 import { ChunkMesher } from "./ChunkMesher";
 import { Inventory, Tool } from "./Inventory";
+import { MobKind } from "./Mob";
 import { Player } from "./Player";
 import { raycastVoxels } from "./raycast";
 import { World } from "./World";
@@ -14,7 +15,7 @@ const TOOL_BONUS_SPEED = 2;
 
 /** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. The sword can't mine at all. */
 const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
-  pickaxe: [BlockType.STONE, BlockType.DIAMOND_ORE],
+  pickaxe: [BlockType.STONE, BlockType.DIAMOND_ORE, BlockType.GOLD_ORE],
   axe: [BlockType.WOOD, BlockType.LEAVES],
   shovel: [BlockType.DIRT],
   sword: [],
@@ -23,6 +24,16 @@ const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
 /** Blocks that drop a different item than themselves when mined. */
 const MINED_DROPS: Partial<Record<BlockType, BlockType>> = {
   [BlockType.DIAMOND_ORE]: BlockType.DIAMOND,
+  [BlockType.GOLD_ORE]: BlockType.GOLD,
+};
+
+/** What each animal drops when killed with the sword. */
+const ANIMAL_DROPS: Partial<Record<MobKind, BlockType>> = {
+  pig: BlockType.MEAT,
+  cow: BlockType.MEAT,
+  goat: BlockType.MEAT,
+  chicken: BlockType.MEAT,
+  sheep: BlockType.WOOL,
 };
 
 export interface InteractionState {
@@ -75,7 +86,10 @@ export class Interaction {
     const direction = new THREE.Vector3();
     this.camera.getWorldDirection(direction);
     const killed = this.animals.tryAttack(origin, direction, REACH);
-    if (killed === "pig" || killed === "cow") this.inventory.add(BlockType.MEAT);
+    if (killed) {
+      const drop = ANIMAL_DROPS[killed];
+      if (drop) this.inventory.add(drop);
+    }
   }
 
   private onMouseUp(e: MouseEvent): void {
