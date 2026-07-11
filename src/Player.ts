@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { BlockType } from "./blocks";
+import { Sfx } from "./Sfx";
 import { World } from "./World";
 
 const GRAVITY = 28;
@@ -29,6 +30,9 @@ const DOUBLE_TAP_WINDOW_MS = 350;
 /** Falling below this Y (out of the map bounds or through a mined hole) triggers a respawn. */
 const VOID_RESPAWN_Y = -10;
 
+/** Horizontal distance walked between footstep sounds. */
+const STEP_INTERVAL_BLOCKS = 1.15;
+
 export class Player {
   readonly controls: PointerLockControls;
   readonly position = new THREE.Vector3();
@@ -38,12 +42,14 @@ export class Player {
   private canFly = false;
   private flying = false;
   private lastSpaceTapTime = 0;
+  private stepDistance = 0;
   private readonly keys = new Set<string>();
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
     domElement: HTMLElement,
     private world: World,
+    private readonly sfx: Sfx,
   ) {
     this.controls = new PointerLockControls(camera, domElement);
 
@@ -222,9 +228,21 @@ export class Player {
       this.tryStepUp(moveDir.x, 0, climbBlocks);
       this.tryStepUp(0, moveDir.z, climbBlocks);
     }
+    const prevX = this.position.x;
+    const prevZ = this.position.z;
     this.moveAxis("x", moveDir.x);
     this.moveAxis("z", moveDir.z);
     this.moveAxis("y", this.velocity.y * dt);
+
+    if (this.grounded && !this.flying && !inWater) {
+      this.stepDistance += Math.hypot(this.position.x - prevX, this.position.z - prevZ);
+      if (this.stepDistance >= STEP_INTERVAL_BLOCKS) {
+        this.stepDistance -= STEP_INTERVAL_BLOCKS;
+        this.sfx.footstep();
+      }
+    } else {
+      this.stepDistance = 0;
+    }
 
     if (this.position.y < VOID_RESPAWN_Y) this.respawn();
 

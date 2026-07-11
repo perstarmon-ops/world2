@@ -8,6 +8,7 @@ import { Inventory } from "./Inventory";
 import { Music } from "./Music";
 import { Player } from "./Player";
 import { PlayerPreview } from "./PlayerPreview";
+import { Sfx } from "./Sfx";
 import { ToolView } from "./ToolView";
 import { UI } from "./ui";
 import { World, WORLD_SIZE_X, WORLD_SIZE_Z } from "./World";
@@ -73,7 +74,8 @@ netherAnimals.setActive(false);
 
 const NETHER_SKY = new THREE.Color(0x2a0f0a);
 
-const player = new Player(camera, renderer.domElement, overworld);
+const sfx = new Sfx();
+const player = new Player(camera, renderer.domElement, overworld, sfx);
 const music = new Music();
 
 const inventory = new Inventory();
@@ -89,6 +91,7 @@ const interaction = new Interaction(
   inventory,
   overworldAnimals,
   renderer.domElement,
+  sfx,
 );
 
 let inNether = false;
@@ -126,6 +129,7 @@ scene.add(targetOutline);
 
 app.addEventListener("click", () => {
   music.start();
+  sfx.start();
   if (ui.isModeChosen() && !ui.isInventoryOpen()) player.controls.lock();
 });
 player.controls.addEventListener("lock", () => ui.setLocked(true));

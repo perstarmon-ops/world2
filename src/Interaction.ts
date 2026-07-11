@@ -7,6 +7,7 @@ import { Inventory, Tool } from "./Inventory";
 import { MobKind } from "./Mob";
 import { Player } from "./Player";
 import { raycastVoxels } from "./raycast";
+import { Sfx } from "./Sfx";
 import { World } from "./World";
 
 const REACH = 6;
@@ -14,6 +15,8 @@ const WATER_MINING_SPEED = 0.35;
 const TOOL_BONUS_SPEED = 2;
 /** Bare-handed mining (no tool selected) works, just slower than any tool. */
 const HAND_MINING_SPEED = 0.6;
+/** Interval between mining "knock" sounds while a block is being broken. */
+const MINE_HIT_INTERVAL = 0.22;
 
 /** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. The sword can't mine at all. */
 const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
@@ -52,6 +55,7 @@ export class Interaction {
   private isLeftDown = false;
   private miningTarget: THREE.Vector3 | null = null;
   private miningProgress = 0;
+  private miningSoundTimer = 0;
   private attackedThisFrame = false;
 
   constructor(
@@ -63,6 +67,7 @@ export class Interaction {
     private readonly inventory: Inventory,
     private animals: AnimalManager,
     domElement: HTMLElement,
+    private readonly sfx: Sfx,
   ) {
     const doc = domElement.ownerDocument;
     doc.addEventListener("mousedown", (e) => this.onMouseDown(e));
@@ -108,6 +113,7 @@ export class Interaction {
     this.isLeftDown = false;
     this.miningTarget = null;
     this.miningProgress = 0;
+    this.miningSoundTimer = 0;
   }
 
   private place(): void {
@@ -191,6 +197,7 @@ export class Interaction {
     if (!this.miningTarget || !this.miningTarget.equals(hit.block)) {
       this.miningTarget = hit.block.clone();
       this.miningProgress = 0;
+      this.miningSoundTimer = 0;
     }
 
     const blockType = this.world.getBlock(hit.block.x, hit.block.y, hit.block.z);
@@ -202,6 +209,12 @@ export class Interaction {
       speed *= TOOL_BONUS_SPEED;
     }
     this.miningProgress += dt * speed;
+
+    this.miningSoundTimer += dt;
+    if (this.miningSoundTimer >= MINE_HIT_INTERVAL) {
+      this.miningSoundTimer -= MINE_HIT_INTERVAL;
+      this.sfx.mineHit();
+    }
 
     if (this.miningProgress >= hardness) {
       this.world.setBlock(hit.block.x, hit.block.y, hit.block.z, BlockType.AIR);
@@ -215,8 +228,10 @@ export class Interaction {
       }
       this.mesher.rebuildAround(hit.block.x, hit.block.z);
       this.inventory.add(MINED_DROPS[blockType] ?? blockType);
+      this.sfx.blockBreak();
       this.miningTarget = null;
       this.miningProgress = 0;
+      this.miningSoundTimer = 0;
       return { mining: false, progress: 0, targetBlock: null, attacked };
     }
 

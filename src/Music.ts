@@ -2,6 +2,7 @@ const OVERWORLD_SCALE = [0, 2, 4, 7, 9, 12, 16, 19];
 const NETHER_SCALE = [0, 1, 3, 6, 7, 10];
 const OVERWORLD_ROOT = 220;
 const NETHER_ROOT = 110;
+const BASE_VOLUME = 0.2;
 
 function semitoneToFreq(root: number, semitones: number): number {
   return root * Math.pow(2, semitones / 12);
@@ -25,8 +26,16 @@ export class Music {
 
   constructor() {
     this.master = this.ctx.createGain();
-    this.master.gain.value = 0.32;
-    this.master.connect(this.ctx.destination);
+    this.master.gain.value = BASE_VOLUME;
+
+    // Rounds off the harsher high end so the synthesized notes sit further
+    // in the background instead of reading as noise.
+    const smoothing = this.ctx.createBiquadFilter();
+    smoothing.type = "lowpass";
+    smoothing.frequency.value = 2200;
+
+    this.master.connect(smoothing);
+    smoothing.connect(this.ctx.destination);
   }
 
   /** Must be called from a user gesture - browsers block audio until then. */
@@ -43,7 +52,7 @@ export class Music {
 
   toggleMute(): boolean {
     this.muted = !this.muted;
-    this.master.gain.setTargetAtTime(this.muted ? 0 : 0.32, this.ctx.currentTime, 0.2);
+    this.master.gain.setTargetAtTime(this.muted ? 0 : BASE_VOLUME, this.ctx.currentTime, 0.2);
     return this.muted;
   }
 
@@ -63,11 +72,11 @@ export class Music {
       const osc = this.ctx.createOscillator();
       osc.type = "sine";
       osc.frequency.value = freq;
-      osc.detune.value = (i - freqs.length / 2) * 4;
+      osc.detune.value = (i - freqs.length / 2) * 2;
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = "lowpass";
-      filter.frequency.value = 1200;
+      filter.frequency.value = 750;
 
       const gain = this.ctx.createGain();
       gain.gain.setValueAtTime(0, time);
@@ -91,8 +100,8 @@ export class Music {
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.value = freq * 4;
-    filter.Q.value = 0.7;
+    filter.frequency.value = freq * 2.5;
+    filter.Q.value = 0.5;
 
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(0, time);
@@ -113,14 +122,14 @@ export class Music {
     const keyOffset = [0, -5, 3, -3][Math.floor(Math.random() * 4)];
     const root = OVERWORLD_ROOT * Math.pow(2, keyOffset / 12);
 
-    this.playPad([0, 7, 12, 16].map((s) => semitoneToFreq(root, s)), now, duration, 0.05);
+    this.playPad([0, 7, 12, 16].map((s) => semitoneToFreq(root, s)), now, duration, 0.035);
 
-    let t = now + 1 + Math.random() * 2;
+    let t = now + 2 + Math.random() * 3;
     while (t < now + duration - 2) {
       const degree = OVERWORLD_SCALE[Math.floor(Math.random() * OVERWORLD_SCALE.length)];
       const freq = semitoneToFreq(root * 2, degree);
-      this.playPluck(freq, t, 1.6 + Math.random() * 1.2, 0.09 + Math.random() * 0.05);
-      t += 1.6 + Math.random() * 2.2;
+      this.playPluck(freq, t, 1.6 + Math.random() * 1.2, 0.06 + Math.random() * 0.03);
+      t += 2.6 + Math.random() * 3;
     }
 
     return duration;
@@ -132,14 +141,14 @@ export class Music {
     const keyOffset = [0, -2, 1][Math.floor(Math.random() * 3)];
     const root = NETHER_ROOT * Math.pow(2, keyOffset / 12);
 
-    this.playPad([0, 1, 6, 12].map((s) => semitoneToFreq(root, s)), now, duration, 0.045);
+    this.playPad([0, 1, 6, 12].map((s) => semitoneToFreq(root, s)), now, duration, 0.03);
 
-    let t = now + 2 + Math.random() * 3;
+    let t = now + 3 + Math.random() * 4;
     while (t < now + duration - 3) {
       const degree = NETHER_SCALE[Math.floor(Math.random() * NETHER_SCALE.length)];
       const freq = semitoneToFreq(root, degree);
-      this.playPluck(freq, t, 2.5 + Math.random() * 2, 0.06 + Math.random() * 0.04);
-      t += 3 + Math.random() * 4;
+      this.playPluck(freq, t, 2.5 + Math.random() * 2, 0.04 + Math.random() * 0.025);
+      t += 4 + Math.random() * 5;
     }
 
     return duration;
