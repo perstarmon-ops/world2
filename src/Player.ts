@@ -21,6 +21,9 @@ const SWIM_SPEED = 3.2;
 const SWIM_ACCEL = 16;
 const SWIM_WALK_SPEED = 3.2;
 
+const FLY_SPEED = 6.5;
+const FLY_VERTICAL_SPEED = 6;
+
 /** Falling below this Y (out of the map bounds or through a mined hole) triggers a respawn. */
 const VOID_RESPAWN_Y = -10;
 
@@ -30,6 +33,7 @@ export class Player {
   private readonly spawnPosition: THREE.Vector3;
   private readonly velocity = new THREE.Vector3();
   private grounded = false;
+  private flying = false;
   private readonly keys = new Set<string>();
 
   constructor(
@@ -137,7 +141,7 @@ export class Player {
   update(dt: number): void {
     if (!this.controls.isLocked) return;
 
-    const inWater = this.isInWater();
+    const inWater = !this.flying && this.isInWater();
 
     const forward = this.forwardVector();
     const right = this.rightVector();
@@ -148,13 +152,17 @@ export class Player {
     if (this.keys.has("KeyD")) moveDir.add(right);
     if (this.keys.has("KeyA")) moveDir.sub(right);
 
-    const sprinting = !inWater && (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"));
-    const speed = inWater ? SWIM_WALK_SPEED : sprinting ? SPRINT_SPEED : WALK_SPEED;
+    const sprinting = !this.flying && !inWater && (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"));
+    const speed = this.flying ? FLY_SPEED : inWater ? SWIM_WALK_SPEED : sprinting ? SPRINT_SPEED : WALK_SPEED;
     if (moveDir.lengthSq() > 0) {
       moveDir.normalize().multiplyScalar(speed * dt);
     }
 
-    if (inWater) {
+    if (this.flying) {
+      if (this.keys.has("Space")) this.velocity.y = FLY_VERTICAL_SPEED;
+      else if (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight")) this.velocity.y = -FLY_VERTICAL_SPEED;
+      else this.velocity.y = 0;
+    } else if (inWater) {
       this.velocity.y -= GRAVITY * WATER_GRAVITY_SCALE * dt;
       this.velocity.y = THREE.MathUtils.clamp(this.velocity.y, -WATER_TERMINAL_VELOCITY, WATER_TERMINAL_VELOCITY);
 
@@ -175,7 +183,7 @@ export class Player {
 
     const wasGrounded = this.grounded;
     this.grounded = false;
-    if (wasGrounded || inWater) {
+    if (!this.flying && (wasGrounded || inWater)) {
       const climbBlocks = inWater ? WATER_CLIMB_BLOCKS : LAND_STEP_BLOCKS;
       this.tryStepUp(moveDir.x, 0, climbBlocks);
       this.tryStepUp(0, moveDir.z, climbBlocks);
@@ -199,6 +207,12 @@ export class Player {
   /** Switches which World this player collides against, e.g. when stepping through a portal. */
   setWorld(world: World): void {
     this.world = world;
+  }
+
+  /** Creative mode flies (Space up, Shift down, no gravity); survival keeps normal jump/gravity physics. */
+  setFlying(enabled: boolean): void {
+    this.flying = enabled;
+    if (enabled) this.velocity.y = 0;
   }
 
   /** Moves the player to an exact position (e.g. through a portal) without carrying over momentum. */

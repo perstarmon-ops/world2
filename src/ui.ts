@@ -37,7 +37,11 @@ export class UI {
   private modeChosen = false;
   private readonly modeSelect: HTMLDivElement;
 
-  constructor(root: HTMLElement, private readonly inventory: Inventory) {
+  constructor(
+    root: HTMLElement,
+    private readonly inventory: Inventory,
+    private readonly onModeSelected: (mode: "survival" | "creative") => void = () => {},
+  ) {
     const style = document.createElement("style");
     style.textContent = CSS;
     document.head.appendChild(style);
@@ -141,7 +145,9 @@ export class UI {
       e.stopPropagation();
       const target = (e.target as HTMLElement).closest<HTMLButtonElement>(".vc-mode-btn");
       if (!target) return;
-      if (target.dataset.mode === "creative") this.inventory.setCreative();
+      const mode = target.dataset.mode === "creative" ? "creative" : "survival";
+      if (mode === "creative") this.inventory.setCreative();
+      this.onModeSelected(mode);
       this.modeChosen = true;
       this.modeSelect.classList.add("vc-hidden");
       this.refreshInventory();

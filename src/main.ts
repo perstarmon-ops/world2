@@ -75,7 +75,7 @@ const NETHER_SKY = new THREE.Color(0x2a0f0a);
 const player = new Player(camera, renderer.domElement, overworld);
 
 const inventory = new Inventory();
-const ui = new UI(app, inventory);
+const ui = new UI(app, inventory, (mode) => player.setFlying(mode === "creative"));
 const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 
 const interaction = new Interaction(
