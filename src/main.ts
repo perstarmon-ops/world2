@@ -119,7 +119,7 @@ targetOutline.visible = false;
 scene.add(targetOutline);
 
 app.addEventListener("click", () => {
-  if (!ui.isInventoryOpen()) player.controls.lock();
+  if (ui.isModeChosen() && !ui.isInventoryOpen()) player.controls.lock();
 });
 player.controls.addEventListener("lock", () => ui.setLocked(true));
 player.controls.addEventListener("unlock", () => {

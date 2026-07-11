@@ -37,6 +37,8 @@ export class UI {
   private readonly miningFill: HTMLDivElement;
   private inventoryOpen = false;
   private pickedSlot: number | null = null;
+  private modeChosen = false;
+  private readonly modeSelect: HTMLDivElement;
 
   constructor(root: HTMLElement, private readonly inventory: Inventory) {
     const style = document.createElement("style");
@@ -120,6 +122,33 @@ export class UI {
     `;
     root.appendChild(this.instructions);
 
+    this.modeSelect = document.createElement("div");
+    this.modeSelect.className = "vc-mode-select";
+    this.modeSelect.innerHTML = `
+      <h1>VoxelCraft</h1>
+      <p>Choose a game mode</p>
+      <div class="vc-mode-buttons">
+        <button class="vc-mode-btn" data-mode="survival">
+          <div class="vc-mode-title">Survival</div>
+          <div class="vc-mode-desc">Mine and gather everything from scratch</div>
+        </button>
+        <button class="vc-mode-btn" data-mode="creative">
+          <div class="vc-mode-title">Creative</div>
+          <div class="vc-mode-desc">Start with every block, and placing never runs out</div>
+        </button>
+      </div>
+    `;
+    this.modeSelect.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const target = (e.target as HTMLElement).closest<HTMLButtonElement>(".vc-mode-btn");
+      if (!target) return;
+      if (target.dataset.mode === "creative") this.inventory.setCreative();
+      this.modeChosen = true;
+      this.modeSelect.classList.add("vc-hidden");
+      this.refreshInventory();
+    });
+    root.appendChild(this.modeSelect);
+
     this.debugEl = document.createElement("div");
     this.debugEl.className = "vc-debug";
     root.appendChild(this.debugEl);
@@ -161,6 +190,10 @@ export class UI {
 
   isInventoryOpen(): boolean {
     return this.inventoryOpen;
+  }
+
+  isModeChosen(): boolean {
+    return this.modeChosen;
   }
 
   getPreviewCanvas(): HTMLCanvasElement {
@@ -370,6 +403,61 @@ const CSS = `
   font-size: 14px;
   opacity: 0.85;
   line-height: 1.8;
+}
+.vc-mode-select {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8,8,12,0.98);
+  color: #fff;
+  z-index: 30;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.vc-mode-select.vc-hidden {
+  display: none;
+}
+.vc-mode-select h1 {
+  margin: 0 0 8px;
+  font-size: 42px;
+  letter-spacing: 2px;
+}
+.vc-mode-select p {
+  font-size: 18px;
+  margin: 0 0 28px;
+  opacity: 0.9;
+}
+.vc-mode-buttons {
+  display: flex;
+  gap: 20px;
+}
+.vc-mode-btn {
+  width: 220px;
+  padding: 18px 16px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.vc-mode-btn:hover {
+  background: rgba(255,255,255,0.18);
+  border-color: #fff;
+}
+.vc-mode-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+.vc-mode-desc {
+  font-size: 13px;
+  opacity: 0.8;
+  line-height: 1.4;
 }
 .vc-inventory {
   position: fixed;

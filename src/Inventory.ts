@@ -24,14 +24,34 @@ export type SlotContent =
  * (via the inventory screen), so a tool and a resource can end up anywhere,
  * but only a hotbar slot (0-8) can be the actively selected one.
  */
+/** Placeholder stack size shown for creative-mode resources; never actually depletes. */
+const CREATIVE_STACK_SIZE = 64;
+
 export class Inventory {
   private readonly slots: SlotContent[] = new Array(TOTAL_SLOT_COUNT).fill(null);
   private selected = 0;
+  private creative = false;
 
   constructor() {
     DEFAULT_TOOLS.forEach((tool, i) => {
       this.slots[i] = { kind: "tool", tool };
     });
+  }
+
+  /** Switches to creative mode: fills remaining slots with every placeable block, and placing never depletes them. */
+  setCreative(): void {
+    this.creative = true;
+    const placeableTypes = (Object.keys(BLOCKS) as unknown as string[])
+      .map(Number)
+      .filter((type) => BLOCKS[type as BlockType].placeable) as BlockType[];
+
+    let slotIndex = 0;
+    for (const block of placeableTypes) {
+      while (slotIndex < TOTAL_SLOT_COUNT && this.slots[slotIndex] !== null) slotIndex++;
+      if (slotIndex >= TOTAL_SLOT_COUNT) break;
+      this.slots[slotIndex] = { kind: "resource", block, count: CREATIVE_STACK_SIZE };
+      slotIndex++;
+    }
   }
 
   getSlot(index: number): SlotContent {
@@ -80,10 +100,11 @@ export class Inventory {
     }
   }
 
-  /** Consumes one of the currently selected resource; returns false if none is available. */
+  /** Consumes one of the currently selected resource; returns false if none is available. In creative mode, blocks never deplete. */
   consumeSelected(): boolean {
     const slot = this.slots[this.selected];
     if (!slot || slot.kind !== "resource") return false;
+    if (this.creative) return true;
     slot.count--;
     if (slot.count <= 0) {
       this.slots[this.selected] = null;
