@@ -51,6 +51,20 @@ export class Player {
 
     window.addEventListener("keydown", (e) => this.keys.add(e.code));
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+    // If the window loses focus mid-press (e.g. an OS prompt steals it), the
+    // matching keyup never arrives - without this a key could get stuck held
+    // forever, which would look like movement silently breaking.
+    window.addEventListener("blur", () => this.keys.clear());
+  }
+
+  /** Shift descends while flying; Ctrl works too in case Shift is intercepted by the OS/browser on some setups. */
+  private isDescendKeyHeld(): boolean {
+    return (
+      this.keys.has("ShiftLeft") ||
+      this.keys.has("ShiftRight") ||
+      this.keys.has("ControlLeft") ||
+      this.keys.has("ControlRight")
+    );
   }
 
   private syncCamera(): void {
@@ -159,8 +173,9 @@ export class Player {
     }
 
     if (this.flying) {
-      if (this.keys.has("Space")) this.velocity.y = FLY_VERTICAL_SPEED;
-      else if (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight")) this.velocity.y = -FLY_VERTICAL_SPEED;
+      const descend = this.isDescendKeyHeld();
+      if (this.keys.has("Space") && !descend) this.velocity.y = FLY_VERTICAL_SPEED;
+      else if (descend) this.velocity.y = -FLY_VERTICAL_SPEED;
       else this.velocity.y = 0;
     } else if (inWater) {
       this.velocity.y -= GRAVITY * WATER_GRAVITY_SCALE * dt;
