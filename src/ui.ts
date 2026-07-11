@@ -9,6 +9,7 @@ const TOOL_ICONS: Record<(typeof TOOL_SLOTS)[number], string> = {
   pickaxe: "⛏",
   axe: "🪓",
   shovel: "♠",
+  sword: "🗡",
 };
 
 export class UI {
@@ -70,6 +71,7 @@ export class UI {
         <li><b>Mouse</b> look &nbsp; <b>Hold left click</b> mine &nbsp; <b>Right click</b> place</li>
         <li><b>1-9</b> select slot &nbsp; <b>Esc</b> release mouse</li>
         <li>Pickaxe (1) speeds up stone, axe (2) speeds up wood/leaves, shovel (3) speeds up dirt</li>
+        <li>Sword (4) attacks instead of mining - click a pig or cow to kill it</li>
         <li>Select a mined block to place it</li>
       </ul>
     `;

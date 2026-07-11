@@ -55,7 +55,16 @@ const player = new Player(camera, renderer.domElement, world);
 const inventory = new Inventory();
 const ui = new UI(app, inventory);
 
-const interaction = new Interaction(camera, player.controls, world, mesher, player, inventory, renderer.domElement);
+const interaction = new Interaction(
+  camera,
+  player.controls,
+  world,
+  mesher,
+  player,
+  inventory,
+  animals,
+  renderer.domElement,
+);
 
 const toolView = new ToolView();
 scene.add(toolView.group);
@@ -89,7 +98,7 @@ function animate(): void {
   animals.update(dt);
 
   const state = interaction.update(dt);
-  toolView.update(dt, camera, state.mining, inventory.getSelectedTool());
+  toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked);
   ui.setMiningProgress(state.mining ? state.progress : null);
   ui.refreshInventory();
   if (state.targetBlock) {

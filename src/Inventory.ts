@@ -1,9 +1,9 @@
 import { BlockType, BLOCKS } from "./blocks";
 
-export type Tool = "pickaxe" | "axe" | "shovel";
+export type Tool = "pickaxe" | "axe" | "shovel" | "sword";
 
-export const TOOL_SLOTS: Tool[] = ["pickaxe", "axe", "shovel"];
-export const RESOURCE_SLOT_COUNT = 6;
+export const TOOL_SLOTS: Tool[] = ["pickaxe", "axe", "shovel", "sword"];
+export const RESOURCE_SLOT_COUNT = 5;
 export const TOTAL_SLOT_COUNT = TOOL_SLOTS.length + RESOURCE_SLOT_COUNT;
 
 export interface ResourceSlot {
@@ -13,8 +13,9 @@ export interface ResourceSlot {
 
 /**
  * The first TOOL_SLOTS.length hotbar slots are fixed tools (pickaxe, axe,
- * shovel - never consumed). The rest hold whatever blocks the player has
- * mined, appearing as they're first collected and disappearing once used up.
+ * shovel, sword - never consumed). The rest hold whatever blocks the player
+ * has mined, appearing as they're first collected and disappearing once used
+ * up.
  */
 export class Inventory {
   private readonly resourceSlots: (ResourceSlot | null)[] = new Array(RESOURCE_SLOT_COUNT).fill(null);

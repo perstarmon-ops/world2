@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { AnimalManager } from "./AnimalManager";
 import { BlockType, BLOCKS } from "./blocks";
 import { ChunkMesher } from "./ChunkMesher";
 import { Inventory, Tool } from "./Inventory";
@@ -11,23 +12,26 @@ const REACH = 6;
 const WATER_MINING_SPEED = 0.35;
 const TOOL_BONUS_SPEED = 2;
 
-/** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. */
+/** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. The sword can't mine at all. */
 const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
   pickaxe: [BlockType.STONE],
   axe: [BlockType.WOOD, BlockType.LEAVES],
   shovel: [BlockType.DIRT],
+  sword: [],
 };
 
 export interface InteractionState {
   mining: boolean;
   progress: number;
   targetBlock: THREE.Vector3 | null;
+  attacked: boolean;
 }
 
 export class Interaction {
   private isLeftDown = false;
   private miningTarget: THREE.Vector3 | null = null;
   private miningProgress = 0;
+  private attackedThisFrame = false;
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -36,6 +40,7 @@ export class Interaction {
     private readonly mesher: ChunkMesher,
     private readonly player: Player,
     private readonly inventory: Inventory,
+    private readonly animals: AnimalManager,
     domElement: HTMLElement,
   ) {
     const doc = domElement.ownerDocument;
@@ -48,10 +53,23 @@ export class Interaction {
   private onMouseDown(e: MouseEvent): void {
     if (!this.controls.isLocked) return;
     if (e.button === 0) {
-      this.isLeftDown = true;
+      if (this.inventory.getSelectedTool() === "sword") {
+        this.attack();
+      } else {
+        this.isLeftDown = true;
+      }
     } else if (e.button === 2) {
       this.place();
     }
+  }
+
+  /** Swings the sword: always animates, and kills the nearest mob in range if any. */
+  private attack(): void {
+    this.attackedThisFrame = true;
+    const origin = this.player.getEyePosition().clone();
+    const direction = new THREE.Vector3();
+    this.camera.getWorldDirection(direction);
+    this.animals.tryAttack(origin, direction, REACH);
   }
 
   private onMouseUp(e: MouseEvent): void {
@@ -91,9 +109,12 @@ export class Interaction {
 
   /** Advances the mining timer against whatever block is under the crosshair; returns the current visual state. */
   update(dt: number): InteractionState {
+    const attacked = this.attackedThisFrame;
+    this.attackedThisFrame = false;
+
     if (!this.controls.isLocked) {
       this.resetMining();
-      return { mining: false, progress: 0, targetBlock: null };
+      return { mining: false, progress: 0, targetBlock: null, attacked };
     }
 
     const hit = this.raycast();
@@ -104,11 +125,12 @@ export class Interaction {
       !this.isLeftDown ||
       !hit ||
       !tool ||
+      tool === "sword" ||
       !BLOCKS[this.world.getBlock(hit.block.x, hit.block.y, hit.block.z)].breakable
     ) {
       this.miningTarget = null;
       this.miningProgress = 0;
-      return { mining: false, progress: 0, targetBlock: hoverBlock };
+      return { mining: false, progress: 0, targetBlock: hoverBlock, attacked };
     }
 
     if (!this.miningTarget || !this.miningTarget.equals(hit.block)) {
@@ -128,9 +150,9 @@ export class Interaction {
       this.inventory.add(blockType);
       this.miningTarget = null;
       this.miningProgress = 0;
-      return { mining: false, progress: 0, targetBlock: null };
+      return { mining: false, progress: 0, targetBlock: null, attacked };
     }
 
-    return { mining: true, progress: this.miningProgress / hardness, targetBlock: hoverBlock };
+    return { mining: true, progress: this.miningProgress / hardness, targetBlock: hoverBlock, attacked };
   }
 }
