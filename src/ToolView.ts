@@ -65,6 +65,24 @@ function buildShovel(): THREE.Group {
   return group;
 }
 
+function buildHand(): THREE.Group {
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xe0ac8e });
+  const sleeveMat = new THREE.MeshLambertMaterial({ color: 0x3a6ea5 });
+
+  const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.22, 0.17), sleeveMat);
+  sleeve.position.set(0, 0.08, 0);
+
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.28, 0.13), skinMat);
+  arm.position.set(0, 0.32, 0);
+
+  const hand = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.16, 0.1), skinMat);
+  hand.position.set(0, 0.52, 0.02);
+
+  const group = new THREE.Group();
+  group.add(sleeve, arm, hand);
+  return group;
+}
+
 function buildSword(): THREE.Group {
   const bladeMat = new THREE.MeshLambertMaterial({ color: 0xcdd2d8 });
   const guardMat = new THREE.MeshLambertMaterial({ color: 0x8a7040 });
@@ -93,7 +111,8 @@ export class ToolView {
   readonly group = new THREE.Group();
   private readonly pivot = new THREE.Group();
   private readonly models: Record<Tool, THREE.Group>;
-  private activeTool: Tool = "pickaxe";
+  private readonly handModel: THREE.Group;
+  private activeTool: Tool | null = "pickaxe";
   private time = 0;
   private attackTimer = 0;
 
@@ -104,18 +123,21 @@ export class ToolView {
       shovel: buildShovel(),
       sword: buildSword(),
     };
-    this.pivot.add(this.models.pickaxe, this.models.axe, this.models.shovel, this.models.sword);
+    this.handModel = buildHand();
+    this.pivot.add(this.models.pickaxe, this.models.axe, this.models.shovel, this.models.sword, this.handModel);
     this.pivot.rotation.copy(REST_ROTATION);
     this.group.add(this.pivot);
     this.group.renderOrder = 999;
-    this.setTool("pickaxe");
+    this.setActive("pickaxe");
   }
 
-  private setTool(tool: Tool): void {
+  /** Shows the held tool's model, or the bare hand/arm when no tool is selected. */
+  private setActive(tool: Tool | null): void {
     this.activeTool = tool;
     for (const key of Object.keys(this.models) as Tool[]) {
       this.models[key].visible = key === tool;
     }
+    this.handModel.visible = tool === null;
   }
 
   /** Repositions the view-model relative to the camera and advances its swing/idle animation. */
@@ -124,8 +146,7 @@ export class ToolView {
     if (attacked) this.attackTimer = ATTACK_SWING_DURATION;
     this.attackTimer = Math.max(0, this.attackTimer - dt);
 
-    this.group.visible = tool !== null;
-    if (tool !== null && tool !== this.activeTool) this.setTool(tool);
+    if (tool !== this.activeTool) this.setActive(tool);
 
     this.group.position.copy(camera.position);
     this.group.quaternion.copy(camera.quaternion);
