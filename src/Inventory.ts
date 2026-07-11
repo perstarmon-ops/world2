@@ -3,7 +3,13 @@ import { BlockType, BLOCKS } from "./blocks";
 export type Tool = "pickaxe" | "axe" | "shovel" | "sword";
 
 export const DEFAULT_TOOLS: Tool[] = ["pickaxe", "axe", "shovel", "sword"];
-export const TOTAL_SLOT_COUNT = 9;
+
+/** Slots 0-8 are the hotbar (keys 1-9, directly selectable). */
+export const HOTBAR_SLOT_COUNT = 9;
+/** Slots 9-35: three extra 9-wide storage rows, reachable only from the inventory screen. */
+export const STORAGE_ROWS = 3;
+export const STORAGE_SLOT_COUNT = STORAGE_ROWS * HOTBAR_SLOT_COUNT;
+export const TOTAL_SLOT_COUNT = HOTBAR_SLOT_COUNT + STORAGE_SLOT_COUNT;
 
 export type SlotContent =
   | { kind: "tool"; tool: Tool }
@@ -11,10 +17,12 @@ export type SlotContent =
   | null;
 
 /**
- * A single 9-slot hotbar (keys 1-9). Slots start with the four tools in
- * order followed by empty slots; mined blocks fill the first empty slot
- * they find. Any two slots can be swapped (via the inventory screen), so a
- * tool and a resource can end up anywhere.
+ * A 9-slot hotbar (keys 1-9) plus three extra 9-wide storage rows (36 slots
+ * total), like a classic Minecraft-style inventory. The hotbar starts with
+ * the four tools in order followed by empty slots; mined blocks fill the
+ * first empty slot anywhere in the inventory. Any two slots can be swapped
+ * (via the inventory screen), so a tool and a resource can end up anywhere,
+ * but only a hotbar slot (0-8) can be the actively selected one.
  */
 export class Inventory {
   private readonly slots: SlotContent[] = new Array(TOTAL_SLOT_COUNT).fill(null);
@@ -35,11 +43,11 @@ export class Inventory {
   }
 
   select(index: number): void {
-    if (index < 0 || index >= TOTAL_SLOT_COUNT) return;
+    if (index < 0 || index >= HOTBAR_SLOT_COUNT) return;
     this.selected = index;
   }
 
-  /** Swaps the contents of two hotbar slots; used by the inventory screen. */
+  /** Swaps the contents of two inventory slots (hotbar or storage); used by the inventory screen. */
   swap(a: number, b: number): void {
     if (a < 0 || a >= TOTAL_SLOT_COUNT || b < 0 || b >= TOTAL_SLOT_COUNT || a === b) return;
     const tmp = this.slots[a];
@@ -57,7 +65,7 @@ export class Inventory {
     return slot?.kind === "resource" ? slot.block : null;
   }
 
-  /** Adds one of `block` to a matching or empty slot. */
+  /** Adds one of `block` to a matching or empty slot anywhere in the inventory. */
   add(block: BlockType): void {
     if (!BLOCKS[block].placeable) return;
     const existing = this.slots.findIndex((slot) => slot?.kind === "resource" && slot.block === block);

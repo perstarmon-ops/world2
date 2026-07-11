@@ -1,5 +1,5 @@
 import { BLOCKS } from "./blocks";
-import { Inventory, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
+import { HOTBAR_SLOT_COUNT, Inventory, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
 
 function rgb([r, g, b]: [number, number, number]): string {
   return `rgb(${r}, ${g}, ${b})`;
@@ -27,9 +27,10 @@ function buildSlotEl(key: number, onClick: () => void): HTMLDivElement {
 
 export class UI {
   private readonly hotbarEls: HTMLDivElement[] = [];
-  private readonly invEls: HTMLDivElement[] = [];
+  private readonly invEls: HTMLDivElement[];
   private readonly instructions: HTMLDivElement;
   private readonly inventoryPanel: HTMLDivElement;
+  private readonly previewCanvas: HTMLCanvasElement;
   private readonly debugEl: HTMLDivElement;
   private readonly clockEl: HTMLDivElement;
   private readonly miningBar: HTMLDivElement;
@@ -52,7 +53,7 @@ export class UI {
 
     const hotbar = document.createElement("div");
     hotbar.className = "vc-hotbar";
-    for (let i = 0; i < TOTAL_SLOT_COUNT; i++) {
+    for (let i = 0; i < HOTBAR_SLOT_COUNT; i++) {
       const el = buildSlotEl(i + 1, () => this.inventory.select(i));
       hotbar.appendChild(el);
       this.hotbarEls.push(el);
@@ -62,15 +63,43 @@ export class UI {
     this.inventoryPanel = document.createElement("div");
     this.inventoryPanel.className = "vc-inventory vc-hidden";
     this.inventoryPanel.innerHTML = `<h2>Inventory</h2><p>Click a slot, then click another to swap. Press <b>E</b> to close.</p>`;
-    const grid = document.createElement("div");
-    grid.className = "vc-inventory-grid";
-    for (let i = 0; i < TOTAL_SLOT_COUNT; i++) {
+
+    const content = document.createElement("div");
+    content.className = "vc-inventory-content";
+
+    this.previewCanvas = document.createElement("canvas");
+    this.previewCanvas.className = "vc-player-canvas";
+    content.appendChild(this.previewCanvas);
+
+    const gridWrap = document.createElement("div");
+    gridWrap.className = "vc-inventory-gridwrap";
+    this.invEls = new Array(TOTAL_SLOT_COUNT);
+
+    // Storage rows (slots 9-35) in their own grid, above a separate single-row
+    // hotbar grid (slots 0-8) - two grids instead of one 36-cell grid so the
+    // gap between them can't misalign either row.
+    const storageGrid = document.createElement("div");
+    storageGrid.className = "vc-inventory-grid";
+    for (let i = HOTBAR_SLOT_COUNT; i < TOTAL_SLOT_COUNT; i++) {
       const el = buildSlotEl(i + 1, () => this.onInventorySlotClick(i));
       el.classList.add("vc-inv-slot");
-      grid.appendChild(el);
-      this.invEls.push(el);
+      storageGrid.appendChild(el);
+      this.invEls[i] = el;
     }
-    this.inventoryPanel.appendChild(grid);
+    gridWrap.appendChild(storageGrid);
+
+    const hotbarGrid = document.createElement("div");
+    hotbarGrid.className = "vc-inventory-grid";
+    for (let i = 0; i < HOTBAR_SLOT_COUNT; i++) {
+      const el = buildSlotEl(i + 1, () => this.onInventorySlotClick(i));
+      el.classList.add("vc-inv-slot");
+      hotbarGrid.appendChild(el);
+      this.invEls[i] = el;
+    }
+    gridWrap.appendChild(hotbarGrid);
+
+    content.appendChild(gridWrap);
+    this.inventoryPanel.appendChild(content);
     this.inventoryPanel.addEventListener("click", (e) => e.stopPropagation());
     root.appendChild(this.inventoryPanel);
 
@@ -101,7 +130,7 @@ export class UI {
 
     window.addEventListener("keydown", (e) => {
       const num = parseInt(e.code.replace("Digit", ""), 10);
-      if (!Number.isNaN(num) && num >= 1 && num <= TOTAL_SLOT_COUNT) {
+      if (!Number.isNaN(num) && num >= 1 && num <= HOTBAR_SLOT_COUNT) {
         this.inventory.select(num - 1);
       }
     });
@@ -134,13 +163,19 @@ export class UI {
     return this.inventoryOpen;
   }
 
+  getPreviewCanvas(): HTMLCanvasElement {
+    return this.previewCanvas;
+  }
+
   /** Re-reads the inventory state and repaints the hotbar/inventory screen; cheap enough to call every frame. */
   refreshInventory(): void {
     const selected = this.inventory.getSelectedIndex();
 
     for (let i = 0; i < TOTAL_SLOT_COUNT; i++) {
       const slotData = this.inventory.getSlot(i);
-      this.paintSlot(this.hotbarEls[i], slotData, i === selected);
+      if (i < HOTBAR_SLOT_COUNT) {
+        this.paintSlot(this.hotbarEls[i], slotData, i === selected);
+      }
       this.paintSlot(this.invEls[i], slotData, i === selected, i === this.pickedSlot);
     }
   }
@@ -362,6 +397,18 @@ const CSS = `
   font-size: 14px;
   opacity: 0.85;
 }
+.vc-inventory-content {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.vc-player-canvas {
+  width: 140px;
+  height: 200px;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.35);
+  border-radius: 6px;
+}
 .vc-inventory-grid {
   display: grid;
   grid-template-columns: repeat(9, 64px);
@@ -370,6 +417,9 @@ const CSS = `
 .vc-inv-slot {
   width: 64px;
   height: 64px;
+}
+.vc-inv-hotbar-row-start {
+  margin-top: 10px;
 }
 .vc-inv-slot .vc-tool-icon {
   font-size: 30px;

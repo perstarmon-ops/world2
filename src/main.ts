@@ -5,6 +5,7 @@ import { DayNightCycle } from "./DayNightCycle";
 import { Interaction } from "./Interaction";
 import { Inventory } from "./Inventory";
 import { Player } from "./Player";
+import { PlayerPreview } from "./PlayerPreview";
 import { ToolView } from "./ToolView";
 import { UI } from "./ui";
 import { World, WORLD_SIZE_X, WORLD_SIZE_Z } from "./World";
@@ -66,6 +67,7 @@ const player = new Player(camera, renderer.domElement, world);
 
 const inventory = new Inventory();
 const ui = new UI(app, inventory);
+const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 
 const interaction = new Interaction(
   camera,
@@ -127,6 +129,7 @@ function animate(): void {
   toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked);
   ui.setMiningProgress(state.mining ? state.progress : null);
   ui.refreshInventory();
+  if (ui.isInventoryOpen()) playerPreview.update(dt);
   if (state.targetBlock) {
     targetOutline.position.set(state.targetBlock.x + 0.5, state.targetBlock.y + 0.5, state.targetBlock.z + 0.5);
     targetOutline.visible = true;
