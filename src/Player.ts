@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { BlockType } from "./blocks";
 import { World } from "./World";
 
 const GRAVITY = 28;
@@ -10,6 +11,12 @@ const PLAYER_RADIUS = 0.3;
 const PLAYER_HEIGHT = 1.8;
 const EYE_HEIGHT = 1.62;
 const MAX_STEP = 0.05;
+
+const WATER_GRAVITY_SCALE = 0.25;
+const WATER_TERMINAL_VELOCITY = 3.5;
+const SWIM_SPEED = 3.2;
+const SWIM_ACCEL = 16;
+const SWIM_WALK_SPEED = 3.2;
 
 export class Player {
   readonly controls: PointerLockControls;
@@ -86,8 +93,19 @@ export class Player {
     return new THREE.Vector3().crossVectors(forward, this.camera.up);
   }
 
+  /** Checked at chest height so the player starts swimming once mostly submerged. */
+  private isInWater(): boolean {
+    const midY = this.position.y + PLAYER_HEIGHT * 0.5;
+    return (
+      this.world.getBlock(Math.floor(this.position.x), Math.floor(midY), Math.floor(this.position.z)) ===
+      BlockType.WATER
+    );
+  }
+
   update(dt: number): void {
     if (!this.controls.isLocked) return;
+
+    const inWater = this.isInWater();
 
     const forward = this.forwardVector();
     const right = this.rightVector();
@@ -98,18 +116,29 @@ export class Player {
     if (this.keys.has("KeyD")) moveDir.add(right);
     if (this.keys.has("KeyA")) moveDir.sub(right);
 
-    const sprinting = this.keys.has("ShiftLeft") || this.keys.has("ShiftRight");
-    const speed = sprinting ? SPRINT_SPEED : WALK_SPEED;
+    const sprinting = !inWater && (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"));
+    const speed = inWater ? SWIM_WALK_SPEED : sprinting ? SPRINT_SPEED : WALK_SPEED;
     if (moveDir.lengthSq() > 0) {
       moveDir.normalize().multiplyScalar(speed * dt);
     }
 
-    this.velocity.y -= GRAVITY * dt;
-    if (this.velocity.y < -50) this.velocity.y = -50;
+    if (inWater) {
+      this.velocity.y -= GRAVITY * WATER_GRAVITY_SCALE * dt;
+      this.velocity.y = THREE.MathUtils.clamp(this.velocity.y, -WATER_TERMINAL_VELOCITY, WATER_TERMINAL_VELOCITY);
 
-    if (this.keys.has("Space") && this.grounded) {
-      this.velocity.y = JUMP_SPEED;
-      this.grounded = false;
+      if (this.keys.has("Space")) {
+        this.velocity.y = Math.min(this.velocity.y + SWIM_ACCEL * dt, SWIM_SPEED);
+      } else if (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight")) {
+        this.velocity.y = Math.max(this.velocity.y - SWIM_ACCEL * dt, -SWIM_SPEED);
+      }
+    } else {
+      this.velocity.y -= GRAVITY * dt;
+      if (this.velocity.y < -50) this.velocity.y = -50;
+
+      if (this.keys.has("Space") && this.grounded) {
+        this.velocity.y = JUMP_SPEED;
+        this.grounded = false;
+      }
     }
 
     this.grounded = false;

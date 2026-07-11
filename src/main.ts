@@ -1,6 +1,8 @@
 import * as THREE from "three";
+import { AnimalManager } from "./AnimalManager";
 import { ChunkMesher } from "./ChunkMesher";
 import { Interaction } from "./Interaction";
+import { Pickaxe } from "./Pickaxe";
 import { Player } from "./Player";
 import { UI } from "./ui";
 import { World, WORLD_SIZE_X, WORLD_SIZE_Z } from "./World";
@@ -45,11 +47,13 @@ const world = new World();
 const mesher = new ChunkMesher(world, scene);
 mesher.buildAll();
 
+const animals = new AnimalManager(world, scene);
+
 const player = new Player(camera, renderer.domElement, world);
 
 const ui = new UI(app);
 
-new Interaction(
+const interaction = new Interaction(
   camera,
   player.controls,
   world,
@@ -58,6 +62,16 @@ new Interaction(
   () => ui.getSelectedBlock(),
   renderer.domElement,
 );
+
+const pickaxe = new Pickaxe();
+scene.add(pickaxe.group);
+
+const targetOutline = new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(1.002, 1.002, 1.002)),
+  new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 }),
+);
+targetOutline.visible = false;
+scene.add(targetOutline);
 
 app.addEventListener("click", () => {
   player.controls.lock();
@@ -78,6 +92,18 @@ function animate(): void {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
   player.update(dt);
+  animals.update(dt);
+
+  const state = interaction.update(dt);
+  pickaxe.update(dt, camera, state.mining);
+  ui.setMiningProgress(state.mining ? state.progress : null);
+  if (state.targetBlock) {
+    targetOutline.position.set(state.targetBlock.x + 0.5, state.targetBlock.y + 0.5, state.targetBlock.z + 0.5);
+    targetOutline.visible = true;
+  } else {
+    targetOutline.visible = false;
+  }
+
   renderer.render(scene, camera);
 
   debugAccum += dt;

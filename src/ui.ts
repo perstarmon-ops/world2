@@ -9,6 +9,8 @@ export class UI {
   private readonly slotEls: HTMLDivElement[] = [];
   private readonly instructions: HTMLDivElement;
   private readonly debugEl: HTMLDivElement;
+  private readonly miningBar: HTMLDivElement;
+  private readonly miningFill: HTMLDivElement;
 
   onSelectionChange: ((block: BlockType) => void) | null = null;
 
@@ -18,6 +20,12 @@ export class UI {
     document.head.appendChild(style);
 
     root.insertAdjacentHTML("beforeend", `<div class="vc-crosshair"></div>`);
+
+    this.miningBar = document.createElement("div");
+    this.miningBar.className = "vc-mining-bar";
+    this.miningBar.innerHTML = `<div class="vc-mining-fill"></div>`;
+    root.appendChild(this.miningBar);
+    this.miningFill = this.miningBar.querySelector(".vc-mining-fill")!;
 
     const hotbar = document.createElement("div");
     hotbar.className = "vc-hotbar";
@@ -41,7 +49,7 @@ export class UI {
       <p>Click to play</p>
       <ul>
         <li><b>WASD</b> move &nbsp; <b>Space</b> jump &nbsp; <b>Shift</b> sprint</li>
-        <li><b>Mouse</b> look &nbsp; <b>Left click</b> break &nbsp; <b>Right click</b> place</li>
+        <li><b>Mouse</b> look &nbsp; <b>Hold left click</b> mine &nbsp; <b>Right click</b> place</li>
         <li><b>1-9</b> select block &nbsp; <b>Esc</b> release mouse</li>
       </ul>
     `;
@@ -78,6 +86,14 @@ export class UI {
   setDebugText(text: string): void {
     this.debugEl.textContent = text;
   }
+
+  /** Pass null to hide the mining progress bar, or 0-1 to show fill progress. */
+  setMiningProgress(progress: number | null): void {
+    this.miningBar.classList.toggle("vc-hidden", progress === null);
+    if (progress !== null) {
+      this.miningFill.style.width = `${Math.min(1, Math.max(0, progress)) * 100}%`;
+    }
+  }
 }
 
 const CSS = `
@@ -102,6 +118,28 @@ const CSS = `
 }
 .vc-crosshair::after {
   top: 8px; left: 0; width: 18px; height: 2px;
+}
+.vc-mining-bar {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 70px;
+  height: 8px;
+  margin: 16px 0 0 -35px;
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: 3px;
+  background: rgba(0,0,0,0.35);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 10;
+}
+.vc-mining-bar.vc-hidden {
+  display: none;
+}
+.vc-mining-fill {
+  height: 100%;
+  width: 0%;
+  background: #f2f2f2;
 }
 .vc-hotbar {
   position: fixed;
