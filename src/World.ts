@@ -271,7 +271,10 @@ export class World {
         for (let dz = 0; dz < size; dz++) {
           const onEdge = dx === 0 || dx === size - 1 || dz === 0 || dz === size - 1;
           if (!onEdge) continue;
-          if (dz === 0 && dx === doorX && dy < 2) continue; // doorway
+          if (dz === 0 && dx === doorX && dy < 2) {
+            this.setBlock(x + dx, y, z + dz, BlockType.DOOR_CLOSED);
+            continue;
+          }
           const isWindow = dy === 1 && (dx === 0 || dx === size - 1) && dz === windowZ;
           this.setBlock(x + dx, y, z + dz, isWindow ? BlockType.GLASS : BlockType.PLANK);
         }

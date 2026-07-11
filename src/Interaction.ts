@@ -16,7 +16,7 @@ const TOOL_BONUS_SPEED = 2;
 /** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. The sword can't mine at all. */
 const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
   pickaxe: [BlockType.STONE, BlockType.DIAMOND_ORE, BlockType.GOLD_ORE],
-  axe: [BlockType.WOOD, BlockType.LEAVES],
+  axe: [BlockType.WOOD, BlockType.LEAVES, BlockType.DOOR_CLOSED, BlockType.DOOR_OPEN],
   shovel: [BlockType.DIRT],
   sword: [],
 };
@@ -25,6 +25,7 @@ const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
 const MINED_DROPS: Partial<Record<BlockType, BlockType>> = {
   [BlockType.DIAMOND_ORE]: BlockType.DIAMOND,
   [BlockType.GOLD_ORE]: BlockType.GOLD,
+  [BlockType.DOOR_OPEN]: BlockType.DOOR_CLOSED,
 };
 
 /** What each animal drops when killed with the sword. */
@@ -106,11 +107,17 @@ export class Interaction {
   }
 
   private place(): void {
-    const blockType = this.inventory.getSelectedBlock();
-    if (blockType === null) return;
-
     const hit = this.raycast();
     if (!hit) return;
+
+    const targetType = this.world.getBlock(hit.block.x, hit.block.y, hit.block.z);
+    if (targetType === BlockType.DOOR_CLOSED || targetType === BlockType.DOOR_OPEN) {
+      this.toggleDoor(hit.block.x, hit.block.y, hit.block.z);
+      return;
+    }
+
+    const blockType = this.inventory.getSelectedBlock();
+    if (blockType === null) return;
     const { x, y, z } = hit.before;
     if (!this.world.inBounds(x, y, z)) return;
 
@@ -118,6 +125,20 @@ export class Interaction {
     this.world.setBlock(x, y, z, blockType);
     this.mesher.rebuildAround(x, z);
     this.player.resolveOverlap();
+  }
+
+  /** Opens/closes the door at (x, y, z), along with any vertically adjacent door block so a 2-tall door swings as one unit. */
+  private toggleDoor(x: number, y: number, z: number): void {
+    const isDoor = (b: BlockType) => b === BlockType.DOOR_CLOSED || b === BlockType.DOOR_OPEN;
+    const current = this.world.getBlock(x, y, z);
+    if (!isDoor(current)) return;
+    const next = current === BlockType.DOOR_CLOSED ? BlockType.DOOR_OPEN : BlockType.DOOR_CLOSED;
+
+    this.world.setBlock(x, y, z, next);
+    for (const ny of [y - 1, y + 1]) {
+      if (isDoor(this.world.getBlock(x, ny, z))) this.world.setBlock(x, ny, z, next);
+    }
+    this.mesher.rebuildAround(x, z);
   }
 
   private raycast() {

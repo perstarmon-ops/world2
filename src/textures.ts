@@ -111,8 +111,36 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.GOLD, paintTexture(BLOCKS[BlockType.GOLD].color, 15, { grain: 14 }), false);
   makeMat(BlockType.WOOL, paintTexture(BLOCKS[BlockType.WOOL].color, 16, { grain: 22 }), false);
   makeMat(BlockType.PATH, paintTexture(BLOCKS[BlockType.PATH].color, 17, { horizontalBands: true }), false);
+  makeMat(BlockType.DOOR_CLOSED, paintDoorClosed(), false);
+  makeMat(BlockType.DOOR_OPEN, paintDoorOpen(), true, 1);
 
   return materials;
+}
+
+function paintDoorClosed(): HTMLCanvasElement {
+  const color = BLOCKS[BlockType.DOOR_CLOSED].color;
+  const canvas = paintTexture(color, 19, { grain: 8 });
+  const ctx = canvas.getContext("2d")!;
+  ctx.strokeStyle = "rgba(60, 40, 20, 0.85)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(1.5, 1.5, TEXTURE_SIZE - 3, TEXTURE_SIZE - 3);
+  ctx.strokeRect(3.5, 2.5, TEXTURE_SIZE - 7, 5);
+  ctx.strokeRect(3.5, 9.5, TEXTURE_SIZE - 7, 5);
+  ctx.fillStyle = "rgb(230, 210, 120)";
+  ctx.fillRect(11, 8, 1, 1);
+  return canvas;
+}
+
+/** Mostly-transparent so an open door reads as a passable gap, with a thin strip standing in for the door pushed against the frame. */
+function paintDoorOpen(): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = TEXTURE_SIZE;
+  canvas.height = TEXTURE_SIZE;
+  const ctx = canvas.getContext("2d")!;
+  const color = BLOCKS[BlockType.DOOR_CLOSED].color;
+  ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+  ctx.fillRect(0, 0, 3, TEXTURE_SIZE);
+  return canvas;
 }
 
 function paintGoldOre(): HTMLCanvasElement {

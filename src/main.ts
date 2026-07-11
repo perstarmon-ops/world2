@@ -126,7 +126,7 @@ function animate(): void {
   dayNight.update(dt, camera.position);
 
   const state = interaction.update(dt);
-  toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked);
+  toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked, inventory.getSelectedBlock());
   ui.setMiningProgress(state.mining ? state.progress : null);
   ui.refreshInventory();
   if (ui.isInventoryOpen()) playerPreview.update(dt);

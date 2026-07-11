@@ -19,6 +19,8 @@ export enum BlockType {
   GOLD = 17,
   WOOL = 18,
   PATH = 19,
+  DOOR_CLOSED = 20,
+  DOOR_OPEN = 21,
 }
 
 export interface BlockInfo {
@@ -58,4 +60,6 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.GOLD]: { name: "Gold", color: [244, 202, 66], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.WOOL]: { name: "Wool", color: [235, 232, 224], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
   [BlockType.PATH]: { name: "Path", color: [176, 150, 105], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.4 },
+  [BlockType.DOOR_CLOSED]: { name: "Door", color: [140, 104, 66], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.6 },
+  [BlockType.DOOR_OPEN]: { name: "Door (Open)", color: [140, 104, 66], solid: false, transparent: true, placeable: false, breakable: true, hardness: 0.6 },
 };

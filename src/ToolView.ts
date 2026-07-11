@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { BlockType, BLOCKS } from "./blocks";
 import { Tool } from "./Inventory";
 
 const REST_ROTATION = new THREE.Euler(-0.35, 0.5, 0.15);
@@ -8,6 +9,7 @@ const SWINGS_PER_SECOND = 2.6;
 const IDLE_SWAY_SPEED = 1.4;
 const IDLE_SWAY_AMOUNT = 0.01;
 const ATTACK_SWING_DURATION = 0.25;
+const HELD_BLOCK_SIZE = 0.26;
 
 function buildPickaxe(): THREE.Group {
   const handleMat = new THREE.MeshLambertMaterial({ color: 0x6b4f31 });
@@ -83,6 +85,15 @@ function buildHand(): THREE.Group {
   return group;
 }
 
+function buildHeldBlock(): THREE.Mesh {
+  const geometry = new THREE.BoxGeometry(HELD_BLOCK_SIZE, HELD_BLOCK_SIZE, HELD_BLOCK_SIZE);
+  const material = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(0, 0.56, 0.1);
+  mesh.rotation.set(0.4, 0.5, 0.2);
+  return mesh;
+}
+
 function buildSword(): THREE.Group {
   const bladeMat = new THREE.MeshLambertMaterial({ color: 0xcdd2d8 });
   const guardMat = new THREE.MeshLambertMaterial({ color: 0x8a7040 });
@@ -112,7 +123,9 @@ export class ToolView {
   private readonly pivot = new THREE.Group();
   private readonly models: Record<Tool, THREE.Group>;
   private readonly handModel: THREE.Group;
+  private readonly heldBlockMesh: THREE.Mesh;
   private activeTool: Tool | null = "pickaxe";
+  private activeBlock: BlockType | null = null;
   private time = 0;
   private attackTimer = 0;
 
@@ -124,29 +137,50 @@ export class ToolView {
       sword: buildSword(),
     };
     this.handModel = buildHand();
-    this.pivot.add(this.models.pickaxe, this.models.axe, this.models.shovel, this.models.sword, this.handModel);
+    this.heldBlockMesh = buildHeldBlock();
+    this.pivot.add(
+      this.models.pickaxe,
+      this.models.axe,
+      this.models.shovel,
+      this.models.sword,
+      this.handModel,
+      this.heldBlockMesh,
+    );
     this.pivot.rotation.copy(REST_ROTATION);
     this.group.add(this.pivot);
     this.group.renderOrder = 999;
-    this.setActive("pickaxe");
+    this.setActive("pickaxe", null);
   }
 
-  /** Shows the held tool's model, or the bare hand/arm when no tool is selected. */
-  private setActive(tool: Tool | null): void {
+  /** Shows the held tool's model, or the bare hand/arm (with a held block, if any) when no tool is selected. */
+  private setActive(tool: Tool | null, block: BlockType | null): void {
     this.activeTool = tool;
+    this.activeBlock = block;
     for (const key of Object.keys(this.models) as Tool[]) {
       this.models[key].visible = key === tool;
     }
     this.handModel.visible = tool === null;
+    this.heldBlockMesh.visible = tool === null && block !== null;
+    if (block !== null) {
+      const [r, g, b] = BLOCKS[block].color;
+      (this.heldBlockMesh.material as THREE.MeshLambertMaterial).color.setRGB(r / 255, g / 255, b / 255);
+    }
   }
 
   /** Repositions the view-model relative to the camera and advances its swing/idle animation. */
-  update(dt: number, camera: THREE.Camera, mining: boolean, tool: Tool | null, attacked: boolean): void {
+  update(
+    dt: number,
+    camera: THREE.Camera,
+    mining: boolean,
+    tool: Tool | null,
+    attacked: boolean,
+    heldBlock: BlockType | null,
+  ): void {
     this.time += dt;
     if (attacked) this.attackTimer = ATTACK_SWING_DURATION;
     this.attackTimer = Math.max(0, this.attackTimer - dt);
 
-    if (tool !== this.activeTool) this.setActive(tool);
+    if (tool !== this.activeTool || heldBlock !== this.activeBlock) this.setActive(tool, heldBlock);
 
     this.group.position.copy(camera.position);
     this.group.quaternion.copy(camera.quaternion);
