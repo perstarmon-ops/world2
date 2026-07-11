@@ -32,6 +32,7 @@ export class Interaction {
     if (!hit) return;
 
     if (e.button === 0) {
+      if (this.world.getBlock(hit.block.x, hit.block.y, hit.block.z) === BlockType.WATER) return;
       this.world.setBlock(hit.block.x, hit.block.y, hit.block.z, BlockType.AIR);
       this.mesher.rebuildAround(hit.block.x, hit.block.z);
     } else if (e.button === 2) {
