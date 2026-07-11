@@ -75,4 +75,12 @@ export class Sfx {
     const freq = 180 + Math.random() * 60;
     this.noiseBurst(this.ctx.currentTime, 0.11, freq, "lowpass", 1.1);
   }
+
+  /** A short pained thud when the player takes damage. */
+  hurt(): void {
+    if (!this.started) return;
+    const now = this.ctx.currentTime;
+    this.noiseBurst(now, 0.16, 350, "lowpass", 1.3);
+    this.noiseBurst(now, 0.08, 1400, "bandpass", 0.5, 0.7);
+  }
 }

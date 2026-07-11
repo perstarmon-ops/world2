@@ -33,6 +33,20 @@ const VOID_RESPAWN_Y = -10;
 /** Horizontal distance walked between footstep sounds. */
 const STEP_INTERVAL_BLOCKS = 1.15;
 
+const MAX_HEALTH = 20;
+const MAX_HUNGER = 20;
+/** Falling this many blocks or less does no damage. */
+const SAFE_FALL_BLOCKS = 3;
+const FALL_DAMAGE_PER_BLOCK = 2;
+/** Seconds of normal walking per hunger point lost; sprinting burns it faster. */
+const HUNGER_INTERVAL = 25;
+const STARVE_INTERVAL = 4;
+/** Starvation alone can weaken the player but never kill them. */
+const STARVE_HEALTH_FLOOR = 1;
+const REGEN_INTERVAL = 4;
+const REGEN_HUNGER_THRESHOLD = 18;
+const FOOD_RESTORE = 6;
+
 export class Player {
   readonly controls: PointerLockControls;
   readonly position = new THREE.Vector3();
@@ -43,6 +57,13 @@ export class Player {
   private flying = false;
   private lastSpaceTapTime = 0;
   private stepDistance = 0;
+  private creative = false;
+  private health = MAX_HEALTH;
+  private hunger = MAX_HUNGER;
+  private peakAirY: number | null = null;
+  private hungerTimer = 0;
+  private starveTimer = 0;
+  private regenTimer = 0;
   private readonly keys = new Set<string>();
 
   constructor(
@@ -229,6 +250,7 @@ export class Player {
       this.tryStepUp(0, moveDir.z, climbBlocks);
     }
     const prevX = this.position.x;
+    const prevY = this.position.y;
     const prevZ = this.position.z;
     this.moveAxis("x", moveDir.x);
     this.moveAxis("z", moveDir.z);
@@ -244,16 +266,69 @@ export class Player {
       this.stepDistance = 0;
     }
 
+    if (this.flying || inWater) {
+      this.peakAirY = null;
+    } else if (this.grounded) {
+      if (!wasGrounded && this.peakAirY !== null) {
+        const fallDistance = this.peakAirY - this.position.y;
+        if (fallDistance > SAFE_FALL_BLOCKS) {
+          this.takeDamage(Math.round((fallDistance - SAFE_FALL_BLOCKS) * FALL_DAMAGE_PER_BLOCK));
+        }
+      }
+      this.peakAirY = null;
+    } else {
+      this.peakAirY = this.peakAirY === null ? Math.max(prevY, this.position.y) : Math.max(this.peakAirY, this.position.y);
+    }
+
+    this.tickVitals(dt, sprinting);
+
     if (this.position.y < VOID_RESPAWN_Y) this.respawn();
 
     this.syncCamera();
   }
 
-  /** Sends the player back to their spawn point, e.g. after falling out of the world. */
+  /** Depletes hunger over time (faster while sprinting), starves health down to a floor when hunger runs out, and slowly regenerates health when hunger is high. Creative mode is exempt. */
+  private tickVitals(dt: number, sprinting: boolean): void {
+    if (this.creative) return;
+
+    this.hungerTimer += dt * (sprinting ? 1.6 : 1);
+    if (this.hungerTimer >= HUNGER_INTERVAL) {
+      this.hungerTimer -= HUNGER_INTERVAL;
+      this.hunger = Math.max(0, this.hunger - 1);
+    }
+
+    if (this.hunger <= 0 && this.health > STARVE_HEALTH_FLOOR) {
+      this.starveTimer += dt;
+      if (this.starveTimer >= STARVE_INTERVAL) {
+        this.starveTimer = 0;
+        this.health = Math.max(STARVE_HEALTH_FLOOR, this.health - 1);
+      }
+    } else {
+      this.starveTimer = 0;
+    }
+
+    if (this.hunger >= REGEN_HUNGER_THRESHOLD && this.health < MAX_HEALTH) {
+      this.regenTimer += dt;
+      if (this.regenTimer >= REGEN_INTERVAL) {
+        this.regenTimer = 0;
+        this.health = Math.min(MAX_HEALTH, this.health + 1);
+      }
+    } else {
+      this.regenTimer = 0;
+    }
+  }
+
+  /** Sends the player back to their spawn point and fully heals them, e.g. after falling out of the world or dying. */
   private respawn(): void {
     this.position.copy(this.spawnPosition);
     this.velocity.set(0, 0, 0);
     this.grounded = false;
+    this.peakAirY = null;
+    this.health = MAX_HEALTH;
+    this.hunger = MAX_HUNGER;
+    this.hungerTimer = 0;
+    this.starveTimer = 0;
+    this.regenTimer = 0;
   }
 
   /** Switches which World this player collides against, e.g. when stepping through a portal. */
@@ -261,11 +336,37 @@ export class Player {
     this.world = world;
   }
 
-  /** Creative mode can fly (double-tap Space to toggle, then Space up/Shift down); survival keeps normal jump/gravity physics. */
+  /** Creative mode can fly (double-tap Space to toggle, then Space up/Shift down) and is invulnerable/never hungry; survival keeps normal jump/gravity physics plus health and hunger. */
   setFlying(enabled: boolean): void {
     this.canFly = enabled;
     this.flying = enabled;
+    this.creative = enabled;
     if (enabled) this.velocity.y = 0;
+  }
+
+  getHealth(): number {
+    return this.health;
+  }
+
+  getHunger(): number {
+    return this.hunger;
+  }
+
+  /** Reduces health by `amount`; no-op in creative mode. Respawns the player on death. */
+  takeDamage(amount: number): void {
+    if (this.creative || amount <= 0 || this.health <= 0) return;
+    this.health = Math.max(0, this.health - amount);
+    this.sfx.hurt();
+    if (this.health <= 0) this.respawn();
+  }
+
+  canEat(): boolean {
+    return !this.creative && this.hunger < MAX_HUNGER;
+  }
+
+  /** Restores hunger from eating; the caller is responsible for consuming the food item. */
+  eat(): void {
+    this.hunger = Math.min(MAX_HUNGER, this.hunger + FOOD_RESTORE);
   }
 
   /** Moves the player to an exact position (e.g. through a portal) without carrying over momentum. */

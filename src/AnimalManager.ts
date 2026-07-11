@@ -10,10 +10,13 @@ const NIGHT_DAYLIGHT_THRESHOLD = 0.5;
 const SPAWN_ATTEMPTS_PER_MOB = 40;
 const MOB_HIT_RADIUS = 0.6;
 const MOB_CENTER_HEIGHT = 0.4;
-/** Kinds that physically shove the player away instead of overlapping them. */
+/** Kinds that physically shove the player away instead of overlapping them, and deal contact damage. */
 const PUSHY_KINDS: MobKind[] = ["zombie", "piglin", "hoglin"];
 /** Combined horizontal clearance kept between a pushy mob and the player. */
 const PUSH_RADIUS = 0.9;
+const MOB_CONTACT_DAMAGE = 2;
+/** Minimum time between contact-damage hits, shared across all pushy mobs touching the player. */
+const MOB_HIT_INTERVAL = 1;
 
 export interface MobSpawnConfig {
   kind: MobKind;
@@ -42,6 +45,7 @@ export const NETHER_SPAWNS: MobSpawnConfig[] = [
 export class AnimalManager {
   private readonly mobs: Mob[] = [];
   private respawnTimer = 0;
+  private hitCooldown = 0;
 
   constructor(
     private readonly world: World,
@@ -92,6 +96,8 @@ export class AnimalManager {
   }
 
   update(dt: number, player: Player, daylight: number): void {
+    this.hitCooldown = Math.max(0, this.hitCooldown - dt);
+
     for (const mob of this.mobs) {
       mob.update(dt, this.world, player.position);
       if (PUSHY_KINDS.includes(mob.kind)) this.pushPlayerAway(mob, player);
@@ -109,7 +115,7 @@ export class AnimalManager {
     }
   }
 
-  /** Shoves the player back if a pushy mob has walked into their space, instead of letting the two overlap. */
+  /** Shoves the player back if a pushy mob has walked into their space, instead of letting the two overlap, and periodically deals contact damage. */
   private pushPlayerAway(mob: Mob, player: Player): void {
     const dx = player.position.x - mob.position.x;
     const dz = player.position.z - mob.position.z;
@@ -119,6 +125,11 @@ export class AnimalManager {
     const [ux, uz] = dist < 1e-4 ? [1, 0] : [dx / dist, dz / dist];
     const overlap = PUSH_RADIUS - dist;
     player.push(ux * overlap, uz * overlap);
+
+    if (this.hitCooldown <= 0) {
+      player.takeDamage(MOB_CONTACT_DAMAGE);
+      this.hitCooldown = MOB_HIT_INTERVAL;
+    }
   }
 
   /** Kills the nearest mob along the ray within reach, if any; returns its kind, or null if nothing was hit. */

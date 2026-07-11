@@ -79,7 +79,10 @@ const player = new Player(camera, renderer.domElement, overworld, sfx);
 const music = new Music();
 
 const inventory = new Inventory();
-const ui = new UI(app, inventory, (mode) => player.setFlying(mode === "creative"));
+const ui = new UI(app, inventory, (mode) => {
+  player.setFlying(mode === "creative");
+  ui.setVitalsVisible(mode !== "creative");
+});
 const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 
 const interaction = new Interaction(
@@ -153,6 +156,13 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyM") musicMuted = music.toggleMute();
 });
 
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "KeyF" || !player.controls.isLocked) return;
+  if (inventory.getSelectedBlock() === BlockType.MEAT && player.canEat() && inventory.consumeSelected()) {
+    player.eat();
+  }
+});
+
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -191,6 +201,8 @@ function animate(): void {
   toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked, inventory.getSelectedBlock());
   ui.setMiningProgress(state.mining ? state.progress : null);
   ui.refreshInventory();
+  ui.setHealth(player.getHealth());
+  ui.setHunger(player.getHunger());
   if (ui.isInventoryOpen()) playerPreview.update(dt);
   if (state.targetBlock) {
     targetOutline.position.set(state.targetBlock.x + 0.5, state.targetBlock.y + 0.5, state.targetBlock.z + 0.5);

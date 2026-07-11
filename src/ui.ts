@@ -9,6 +9,10 @@ const TOOL_ICONS: Record<Tool, string> = {
   sword: "🗡",
 };
 
+/** Each heart/drumstick icon represents 2 points of health/hunger, out of a max of 20. */
+const VITAL_ICON_COUNT = 10;
+const VITAL_POINTS_PER_ICON = 2;
+
 function buildSlotEl(key: number, onClick: () => void): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "vc-slot vc-slot-empty";
@@ -32,6 +36,9 @@ export class UI {
   private readonly clockEl: HTMLDivElement;
   private readonly miningBar: HTMLDivElement;
   private readonly miningFill: HTMLDivElement;
+  private readonly vitals: HTMLDivElement;
+  private readonly healthEls: HTMLDivElement[] = [];
+  private readonly hungerEls: HTMLDivElement[] = [];
   private inventoryOpen = false;
   private pickedSlot: number | null = null;
   private modeChosen = false;
@@ -62,6 +69,30 @@ export class UI {
       this.hotbarEls.push(el);
     }
     root.appendChild(hotbar);
+
+    this.vitals = document.createElement("div");
+    this.vitals.className = "vc-vitals vc-hidden";
+    const healthRow = document.createElement("div");
+    healthRow.className = "vc-vitals-row";
+    for (let i = 0; i < VITAL_ICON_COUNT; i++) {
+      const el = document.createElement("div");
+      el.className = "vc-heart";
+      el.textContent = "❤";
+      healthRow.appendChild(el);
+      this.healthEls.push(el);
+    }
+    const hungerRow = document.createElement("div");
+    hungerRow.className = "vc-vitals-row";
+    for (let i = 0; i < VITAL_ICON_COUNT; i++) {
+      const el = document.createElement("div");
+      el.className = "vc-hunger";
+      el.textContent = "🍗";
+      hungerRow.appendChild(el);
+      this.hungerEls.push(el);
+    }
+    this.vitals.appendChild(healthRow);
+    this.vitals.appendChild(hungerRow);
+    root.appendChild(this.vitals);
 
     this.inventoryPanel = document.createElement("div");
     this.inventoryPanel.className = "vc-inventory vc-hidden";
@@ -121,6 +152,8 @@ export class UI {
         <li>Sword (4) attacks instead of mining - kill a pig or cow for meat</li>
         <li>Zombies wander the world and will chase you if you get close</li>
         <li>Select a mined block to place it</li>
+        <li>Select meat and press <b>F</b> to eat - watch your hunger, or health stops regenerating</li>
+        <li>Falling too far or getting hit by mobs costs health - it regenerates when well-fed</li>
       </ul>
     `;
     root.appendChild(this.instructions);
@@ -288,6 +321,26 @@ export class UI {
       this.miningFill.style.width = `${Math.min(1, Math.max(0, progress)) * 100}%`;
     }
   }
+
+  /** Creative mode has no health/hunger consequences, so the bars stay hidden there. */
+  setVitalsVisible(visible: boolean): void {
+    this.vitals.classList.toggle("vc-hidden", !visible);
+  }
+
+  private paintVitalRow(els: HTMLDivElement[], points: number): void {
+    els.forEach((el, i) => {
+      const remaining = Math.max(0, Math.min(VITAL_POINTS_PER_ICON, points - i * VITAL_POINTS_PER_ICON));
+      el.style.opacity = String(0.2 + (remaining / VITAL_POINTS_PER_ICON) * 0.8);
+    });
+  }
+
+  setHealth(health: number): void {
+    this.paintVitalRow(this.healthEls, health);
+  }
+
+  setHunger(hunger: number): void {
+    this.paintVitalRow(this.hungerEls, hunger);
+  }
 }
 
 const CSS = `
@@ -334,6 +387,35 @@ const CSS = `
   height: 100%;
   width: 0%;
   background: #f2f2f2;
+}
+.vc-vitals {
+  position: fixed;
+  bottom: 82px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  z-index: 10;
+  pointer-events: none;
+}
+.vc-vitals.vc-hidden {
+  display: none;
+}
+.vc-vitals-row {
+  display: flex;
+  gap: 3px;
+}
+.vc-heart, .vc-hunger {
+  font-size: 18px;
+  text-shadow: 0 0 3px rgba(0,0,0,0.8);
+}
+.vc-heart {
+  color: #e0303f;
+}
+.vc-hunger {
+  color: #c9862f;
 }
 .vc-hotbar {
   position: fixed;
