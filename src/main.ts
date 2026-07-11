@@ -5,6 +5,7 @@ import { ChunkMesher } from "./ChunkMesher";
 import { DayNightCycle } from "./DayNightCycle";
 import { Interaction } from "./Interaction";
 import { Inventory } from "./Inventory";
+import { Music } from "./Music";
 import { Player } from "./Player";
 import { PlayerPreview } from "./PlayerPreview";
 import { ToolView } from "./ToolView";
@@ -73,6 +74,7 @@ netherAnimals.setActive(false);
 const NETHER_SKY = new THREE.Color(0x2a0f0a);
 
 const player = new Player(camera, renderer.domElement, overworld);
+const music = new Music();
 
 const inventory = new Inventory();
 const ui = new UI(app, inventory, (mode) => player.setFlying(mode === "creative"));
@@ -109,6 +111,7 @@ function enterDimension(next: World, nextMesher: ChunkMesher, nextAnimals: Anima
 
   inNether = goingToNether;
   portalCooldown = PORTAL_COOLDOWN_SECONDS;
+  music.setMood(goingToNether ? "nether" : "overworld");
 }
 
 const toolView = new ToolView();
@@ -122,6 +125,7 @@ targetOutline.visible = false;
 scene.add(targetOutline);
 
 app.addEventListener("click", () => {
+  music.start();
   if (ui.isModeChosen() && !ui.isInventoryOpen()) player.controls.lock();
 });
 player.controls.addEventListener("lock", () => ui.setLocked(true));
@@ -138,6 +142,11 @@ window.addEventListener("keydown", (e) => {
     ui.toggleInventory();
     player.controls.unlock();
   }
+});
+
+let musicMuted = false;
+window.addEventListener("keydown", (e) => {
+  if (e.code === "KeyM") musicMuted = music.toggleMute();
 });
 
 window.addEventListener("resize", () => {
@@ -194,7 +203,7 @@ function animate(): void {
     const p = player.getEyePosition();
     const fps = dt > 0 ? Math.round(1 / dt) : 0;
     ui.setDebugText(
-      `VoxelCraft\nFPS ~${fps}\nX ${p.x.toFixed(1)}  Y ${p.y.toFixed(1)}  Z ${p.z.toFixed(1)}`,
+      `VoxelCraft\nFPS ~${fps}\nX ${p.x.toFixed(1)}  Y ${p.y.toFixed(1)}  Z ${p.z.toFixed(1)}\nMusic ${musicMuted ? "off" : "on"} (M)`,
     );
     ui.setClock(dayNight.getClockText());
   }
