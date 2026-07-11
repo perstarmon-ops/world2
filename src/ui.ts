@@ -16,6 +16,7 @@ export class UI {
   private readonly slotEls: HTMLDivElement[] = [];
   private readonly instructions: HTMLDivElement;
   private readonly debugEl: HTMLDivElement;
+  private readonly clockEl: HTMLDivElement;
   private readonly miningBar: HTMLDivElement;
   private readonly miningFill: HTMLDivElement;
 
@@ -71,7 +72,8 @@ export class UI {
         <li><b>Mouse</b> look &nbsp; <b>Hold left click</b> mine &nbsp; <b>Right click</b> place</li>
         <li><b>1-9</b> select slot &nbsp; <b>Esc</b> release mouse</li>
         <li>Pickaxe (1) speeds up stone, axe (2) speeds up wood/leaves, shovel (3) speeds up dirt</li>
-        <li>Sword (4) attacks instead of mining - click a pig or cow to kill it</li>
+        <li>Sword (4) attacks instead of mining - kill a pig or cow for meat</li>
+        <li>Zombies wander the world and will chase you if you get close</li>
         <li>Select a mined block to place it</li>
       </ul>
     `;
@@ -80,6 +82,10 @@ export class UI {
     this.debugEl = document.createElement("div");
     this.debugEl.className = "vc-debug";
     root.appendChild(this.debugEl);
+
+    this.clockEl = document.createElement("div");
+    this.clockEl.className = "vc-clock";
+    root.appendChild(this.clockEl);
 
     window.addEventListener("keydown", (e) => {
       const num = parseInt(e.code.replace("Digit", ""), 10);
@@ -120,6 +126,10 @@ export class UI {
 
   setDebugText(text: string): void {
     this.debugEl.textContent = text;
+  }
+
+  setClock(text: string): void {
+    this.clockEl.textContent = text;
   }
 
   /** Pass null to hide the mining progress bar, or 0-1 to show fill progress. */
@@ -281,6 +291,18 @@ const CSS = `
   text-shadow: 0 0 3px #000;
   z-index: 10;
   white-space: pre;
+  pointer-events: none;
+}
+.vc-clock {
+  position: fixed;
+  top: 8px;
+  right: 12px;
+  color: #fff;
+  font-family: monospace;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 0 4px rgba(0,0,0,0.8);
+  z-index: 10;
   pointer-events: none;
 }
 `;

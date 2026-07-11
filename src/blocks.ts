@@ -10,6 +10,7 @@ export enum BlockType {
   PLANK = 8,
   GLASS = 9,
   BRICK = 10,
+  MEAT = 11,
 }
 
 export interface BlockInfo {
@@ -38,4 +39,5 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.PLANK]: { name: "Plank", color: [172, 134, 84], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.6 },
   [BlockType.GLASS]: { name: "Glass", color: [210, 235, 240], solid: true, transparent: true, placeable: true, breakable: true, hardness: 0.35 },
   [BlockType.BRICK]: { name: "Brick", color: [150, 78, 61], solid: true, transparent: false, placeable: true, breakable: true, hardness: 1.0 },
+  [BlockType.MEAT]: { name: "Meat", color: [186, 92, 84], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
 };

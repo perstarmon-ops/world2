@@ -2,11 +2,13 @@ import * as THREE from "three";
 import { BlockType } from "./blocks";
 import { World, SEA_LEVEL } from "./World";
 
-export type MobKind = "pig" | "cow";
+export type MobKind = "pig" | "cow" | "zombie";
 
 const WANDER_SPEED = 1.3;
 const LEG_SWING_SPEED = 6;
 const LEG_SWING_AMOUNT = 0.5;
+const ZOMBIE_CHASE_RADIUS = 10;
+const ZOMBIE_CHASE_SPEED = 2.2;
 
 function buildPig(): { group: THREE.Group; legs: THREE.Mesh[] } {
   const group = new THREE.Group();
@@ -87,6 +89,47 @@ function buildCow(): { group: THREE.Group; legs: THREE.Mesh[] } {
   return { group, legs };
 }
 
+function buildZombie(): { group: THREE.Group; legs: THREE.Mesh[] } {
+  const group = new THREE.Group();
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0x4f8a4f });
+  const shirtMat = new THREE.MeshLambertMaterial({ color: 0x35667a });
+  const pantsMat = new THREE.MeshLambertMaterial({ color: 0x2b2f52 });
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), skinMat);
+  head.position.set(0, 1.6, 0);
+  group.add(head);
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.28), shirtMat);
+  body.position.set(0, 1.15, 0);
+  group.add(body);
+
+  const armGeom = new THREE.BoxGeometry(0.15, 0.65, 0.15);
+  armGeom.translate(0, -0.325, 0);
+  for (const x of [-0.32, 0.32]) {
+    const arm = new THREE.Mesh(armGeom, skinMat);
+    arm.position.set(x, 1.5, 0);
+    arm.rotation.x = -Math.PI / 2.4;
+    group.add(arm);
+  }
+
+  const legs: THREE.Mesh[] = [];
+  for (const x of [-0.13, 0.13]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.8, 0.18), pantsMat);
+    leg.geometry.translate(0, -0.4, 0);
+    leg.position.set(x, 0.8, 0);
+    group.add(leg);
+    legs.push(leg);
+  }
+
+  return { group, legs };
+}
+
+function buildModel(kind: MobKind): { group: THREE.Group; legs: THREE.Mesh[] } {
+  if (kind === "pig") return buildPig();
+  if (kind === "cow") return buildCow();
+  return buildZombie();
+}
+
 export class Mob {
   readonly group: THREE.Group;
   readonly position: THREE.Vector3;
@@ -97,7 +140,7 @@ export class Mob {
   private walkTime = 0;
 
   constructor(readonly kind: MobKind, spawnX: number, spawnZ: number, spawnY: number) {
-    const built = kind === "pig" ? buildPig() : buildCow();
+    const built = buildModel(kind);
     this.group = built.group;
     this.legs = built.legs;
     this.position = new THREE.Vector3(spawnX, spawnY, spawnZ);
@@ -110,7 +153,6 @@ export class Mob {
     this.stateTimer = this.walking ? 1.5 + Math.random() * 2.5 : 1 + Math.random() * 2;
     if (this.walking) {
       this.yaw = Math.random() * Math.PI * 2;
-      this.group.rotation.y = this.yaw;
     }
   }
 
@@ -121,13 +163,30 @@ export class Mob {
     return world.getBlock(Math.floor(x), height - 1, Math.floor(z)) !== BlockType.WATER;
   }
 
-  update(dt: number, world: World): void {
-    this.stateTimer -= dt;
-    if (this.stateTimer <= 0) this.pickNewState();
+  update(dt: number, world: World, playerPosition?: THREE.Vector3): void {
+    let speed = WANDER_SPEED;
+    let chasing = false;
+
+    if (this.kind === "zombie" && playerPosition) {
+      const dx = playerPosition.x - this.position.x;
+      const dz = playerPosition.z - this.position.z;
+      if (dx * dx + dz * dz < ZOMBIE_CHASE_RADIUS * ZOMBIE_CHASE_RADIUS) {
+        chasing = true;
+        this.yaw = Math.atan2(dx, dz);
+        this.walking = true;
+        this.stateTimer = 0.3;
+        speed = ZOMBIE_CHASE_SPEED;
+      }
+    }
+
+    if (!chasing) {
+      this.stateTimer -= dt;
+      if (this.stateTimer <= 0) this.pickNewState();
+    }
 
     if (this.walking) {
-      const dx = Math.sin(this.yaw) * WANDER_SPEED * dt;
-      const dz = Math.cos(this.yaw) * WANDER_SPEED * dt;
+      const dx = Math.sin(this.yaw) * speed * dt;
+      const dz = Math.cos(this.yaw) * speed * dt;
       const nx = this.position.x + dx;
       const nz = this.position.z + dz;
 
@@ -136,17 +195,23 @@ export class Mob {
         this.position.z = nz;
         this.position.y = world.surfaceHeightAt(Math.floor(nx), Math.floor(nz));
         this.walkTime += dt;
-      } else {
+      } else if (!chasing) {
         this.stateTimer = 0;
       }
     }
 
     this.group.position.copy(this.position);
+    this.group.rotation.y = this.yaw;
 
     const swing = this.walking ? Math.sin(this.walkTime * LEG_SWING_SPEED) * LEG_SWING_AMOUNT : 0;
-    this.legs[0].rotation.x = swing;
-    this.legs[3].rotation.x = swing;
-    this.legs[1].rotation.x = -swing;
-    this.legs[2].rotation.x = -swing;
+    if (this.legs.length === 4) {
+      this.legs[0].rotation.x = swing;
+      this.legs[3].rotation.x = swing;
+      this.legs[1].rotation.x = -swing;
+      this.legs[2].rotation.x = -swing;
+    } else {
+      this.legs[0].rotation.x = swing;
+      this.legs[1].rotation.x = -swing;
+    }
   }
 }

@@ -5,6 +5,7 @@ import { SEA_LEVEL, World } from "./World";
 
 const PIG_COUNT = 6;
 const COW_COUNT = 6;
+const ZOMBIE_COUNT = 5;
 const SPAWN_ATTEMPTS_PER_MOB = 40;
 const MOB_HIT_RADIUS = 0.6;
 const MOB_CENTER_HEIGHT = 0.4;
@@ -15,6 +16,7 @@ export class AnimalManager {
   constructor(private readonly world: World, private readonly scene: THREE.Scene) {
     this.spawnKind("pig", PIG_COUNT);
     this.spawnKind("cow", COW_COUNT);
+    this.spawnKind("zombie", ZOMBIE_COUNT);
   }
 
   private spawnKind(kind: MobKind, count: number): void {
@@ -45,14 +47,14 @@ export class AnimalManager {
     return this.mobs;
   }
 
-  update(dt: number): void {
+  update(dt: number, playerPosition: THREE.Vector3): void {
     for (const mob of this.mobs) {
-      mob.update(dt, this.world);
+      mob.update(dt, this.world, playerPosition);
     }
   }
 
-  /** Kills the nearest mob along the ray within reach, if any; returns whether something died. */
-  tryAttack(origin: THREE.Vector3, direction: THREE.Vector3, maxDistance: number): boolean {
+  /** Kills the nearest mob along the ray within reach, if any; returns its kind, or null if nothing was hit. */
+  tryAttack(origin: THREE.Vector3, direction: THREE.Vector3, maxDistance: number): MobKind | null {
     let closestIndex = -1;
     let closestDistance = Infinity;
 
@@ -70,9 +72,9 @@ export class AnimalManager {
       }
     });
 
-    if (closestIndex === -1) return false;
+    if (closestIndex === -1) return null;
     const [mob] = this.mobs.splice(closestIndex, 1);
     this.scene.remove(mob.group);
-    return true;
+    return mob.kind;
   }
 }

@@ -102,6 +102,7 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.PLANK, paintTexture(BLOCKS[BlockType.PLANK].color, 8, { horizontalBands: true }), false);
   makeMat(BlockType.GLASS, paintGlass(), true, 0.4);
   makeMat(BlockType.BRICK, paintBrick(), false);
+  makeMat(BlockType.MEAT, paintTexture(BLOCKS[BlockType.MEAT].color, 11, { grain: 26 }), false);
 
   return materials;
 }

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { AnimalManager } from "./AnimalManager";
 import { ChunkMesher } from "./ChunkMesher";
+import { DayNightCycle } from "./DayNightCycle";
 import { Interaction } from "./Interaction";
 import { Inventory } from "./Inventory";
 import { Player } from "./Player";
@@ -42,7 +43,18 @@ scene.add(hemiLight);
 const sunLight = new THREE.DirectionalLight(0xfff3d6, 1.1);
 sunLight.position.set(WORLD_SIZE_X * 0.4, 120, WORLD_SIZE_Z * 0.2);
 scene.add(sunLight);
-scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+scene.add(ambientLight);
+
+const dayNight = new DayNightCycle(
+  scene,
+  scene.fog as THREE.Fog,
+  hemiLight,
+  sunLight,
+  ambientLight,
+  Math.max(WORLD_SIZE_X, WORLD_SIZE_Z),
+);
 
 const world = new World();
 const mesher = new ChunkMesher(world, scene);
@@ -95,7 +107,8 @@ function animate(): void {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
   player.update(dt);
-  animals.update(dt);
+  animals.update(dt, player.position);
+  dayNight.update(dt);
 
   const state = interaction.update(dt);
   toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked);
@@ -118,6 +131,7 @@ function animate(): void {
     ui.setDebugText(
       `VoxelCraft\nFPS ~${fps}\nX ${p.x.toFixed(1)}  Y ${p.y.toFixed(1)}  Z ${p.z.toFixed(1)}`,
     );
+    ui.setClock(dayNight.getClockText());
   }
 }
 

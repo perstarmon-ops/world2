@@ -63,13 +63,14 @@ export class Interaction {
     }
   }
 
-  /** Swings the sword: always animates, and kills the nearest mob in range if any. */
+  /** Swings the sword: always animates, kills the nearest mob in range if any, and drops meat from animals. */
   private attack(): void {
     this.attackedThisFrame = true;
     const origin = this.player.getEyePosition().clone();
     const direction = new THREE.Vector3();
     this.camera.getWorldDirection(direction);
-    this.animals.tryAttack(origin, direction, REACH);
+    const killed = this.animals.tryAttack(origin, direction, REACH);
+    if (killed === "pig" || killed === "cow") this.inventory.add(BlockType.MEAT);
   }
 
   private onMouseUp(e: MouseEvent): void {
