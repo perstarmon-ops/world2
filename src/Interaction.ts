@@ -2,14 +2,21 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { BlockType, BLOCKS } from "./blocks";
 import { ChunkMesher } from "./ChunkMesher";
-import { Inventory } from "./Inventory";
+import { Inventory, Tool } from "./Inventory";
 import { Player } from "./Player";
 import { raycastVoxels } from "./raycast";
 import { World } from "./World";
 
 const REACH = 6;
 const WATER_MINING_SPEED = 0.35;
-const AXE_STONE_SPEED = 2;
+const TOOL_BONUS_SPEED = 2;
+
+/** Blocks each tool mines at TOOL_BONUS_SPEED instead of the base rate. */
+const TOOL_BONUS_BLOCKS: Record<Tool, BlockType[]> = {
+  pickaxe: [BlockType.STONE],
+  axe: [BlockType.WOOD, BlockType.LEAVES],
+  shovel: [BlockType.DIRT],
+};
 
 export interface InteractionState {
   mining: boolean;
@@ -112,7 +119,7 @@ export class Interaction {
     const blockType = this.world.getBlock(hit.block.x, hit.block.y, hit.block.z);
     const hardness = BLOCKS[blockType].hardness;
     let speed = this.player.isInWater() ? WATER_MINING_SPEED : 1;
-    if (tool === "axe" && blockType === BlockType.STONE) speed *= AXE_STONE_SPEED;
+    if (TOOL_BONUS_BLOCKS[tool].includes(blockType)) speed *= TOOL_BONUS_SPEED;
     this.miningProgress += dt * speed;
 
     if (this.miningProgress >= hardness) {

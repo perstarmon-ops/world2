@@ -8,6 +8,7 @@ function rgb([r, g, b]: [number, number, number]): string {
 const TOOL_ICONS: Record<(typeof TOOL_SLOTS)[number], string> = {
   pickaxe: "⛏",
   axe: "🪓",
+  shovel: "♠",
 };
 
 export class UI {
@@ -68,7 +69,8 @@ export class UI {
         <li><b>WASD</b> move &nbsp; <b>Space</b> jump &nbsp; <b>Shift</b> sprint/dive</li>
         <li><b>Mouse</b> look &nbsp; <b>Hold left click</b> mine &nbsp; <b>Right click</b> place</li>
         <li><b>1-9</b> select slot &nbsp; <b>Esc</b> release mouse</li>
-        <li>Pickaxe (1) and axe (2) mine; the axe breaks stone faster. Select a mined block to place it</li>
+        <li>Pickaxe (1) speeds up stone, axe (2) speeds up wood/leaves, shovel (3) speeds up dirt</li>
+        <li>Select a mined block to place it</li>
       </ul>
     `;
     root.appendChild(this.instructions);

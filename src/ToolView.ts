@@ -46,6 +46,24 @@ function buildAxe(): THREE.Group {
   return group;
 }
 
+function buildShovel(): THREE.Group {
+  const handleMat = new THREE.MeshLambertMaterial({ color: 0x6b4f31 });
+  const bladeMat = new THREE.MeshLambertMaterial({ color: 0xb0b0b0 });
+
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.55, 0.05), handleMat);
+  handle.position.set(0, 0.275, 0);
+
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.03), bladeMat);
+  blade.position.set(0, 0.6, 0);
+
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.09), handleMat);
+  grip.position.set(0, 0.02, 0);
+
+  const group = new THREE.Group();
+  group.add(handle, blade, grip);
+  return group;
+}
+
 /**
  * First-person held tool. Follows the camera every frame (rather than being
  * parented to it) because the renderer only draws objects reachable from the
@@ -62,8 +80,9 @@ export class ToolView {
     this.models = {
       pickaxe: buildPickaxe(),
       axe: buildAxe(),
+      shovel: buildShovel(),
     };
-    this.pivot.add(this.models.pickaxe, this.models.axe);
+    this.pivot.add(this.models.pickaxe, this.models.axe, this.models.shovel);
     this.pivot.rotation.copy(REST_ROTATION);
     this.group.add(this.pivot);
     this.group.renderOrder = 999;
@@ -72,8 +91,9 @@ export class ToolView {
 
   private setTool(tool: Tool): void {
     this.activeTool = tool;
-    this.models.pickaxe.visible = tool === "pickaxe";
-    this.models.axe.visible = tool === "axe";
+    for (const key of Object.keys(this.models) as Tool[]) {
+      this.models[key].visible = key === tool;
+    }
   }
 
   /** Repositions the view-model relative to the camera and advances its swing/idle animation. */
