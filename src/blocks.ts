@@ -82,7 +82,8 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.MUSHROOM_STEM]: { name: "Mushroom Stem", color: [178, 32, 32], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.MUSHROOM_CAP]: { name: "Red Mushroom Cap", color: [178, 32, 32], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.FIRE]: { name: "Fire", color: [230, 120, 30], solid: false, transparent: true, placeable: true, breakable: true, hardness: 0.1, renderAsCross: true },
-  [BlockType.BED]: { name: "Bed", color: [188, 54, 54], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.4 },
+  // Never actually becomes a world block - placing it spawns a two-block-long Bed entity instead (see Interaction.place).
+  [BlockType.BED]: { name: "Bed", color: [188, 54, 54], solid: false, transparent: false, placeable: true, breakable: false, hardness: 0 },
   [BlockType.COBBLESTONE]: { name: "Cobblestone", color: [116, 116, 112], solid: true, transparent: false, placeable: true, breakable: true, hardness: 1.1 },
   [BlockType.SANDSTONE]: { name: "Sandstone", color: [223, 210, 165], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.9 },
   [BlockType.RED_WOOL]: { name: "Red Wool", color: [200, 52, 48], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { AnimalManager, NETHER_SPAWNS } from "./AnimalManager";
+import { BedManager } from "./BedManager";
 import { BlockType } from "./blocks";
 import { BoatManager } from "./BoatManager";
 import { ChunkMesher } from "./ChunkMesher";
@@ -83,6 +84,7 @@ const music = new Music();
 const inventory = new Inventory();
 /** Boats only exist in the overworld (the nether has no water). */
 const boatManager = new BoatManager(scene);
+const bedManager = new BedManager(scene);
 
 const interaction = new Interaction(
   camera,
@@ -95,6 +97,7 @@ const interaction = new Interaction(
   renderer.domElement,
   sfx,
   boatManager,
+  bedManager,
 );
 
 let inNether = false;

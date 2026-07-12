@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { AnimalManager } from "./AnimalManager";
+import { BedManager } from "./BedManager";
 import { BlockType, BLOCKS } from "./blocks";
 import { BOAT_FLOAT_OFFSET, BoatManager } from "./BoatManager";
 import { ChunkMesher } from "./ChunkMesher";
@@ -72,6 +73,7 @@ export class Interaction {
     domElement: HTMLElement,
     private readonly sfx: Sfx,
     private readonly boats: BoatManager,
+    private readonly beds: BedManager,
   ) {
     const doc = domElement.ownerDocument;
     doc.addEventListener("mousedown", (e) => this.onMouseDown(e));
@@ -121,8 +123,13 @@ export class Interaction {
   }
 
   private place(): void {
-    if (this.inventory.getSelectedBlock() === BlockType.BOAT) {
+    const selected = this.inventory.getSelectedBlock();
+    if (selected === BlockType.BOAT) {
       this.tryPlaceBoat();
+      return;
+    }
+    if (selected === BlockType.BED) {
+      this.tryPlaceBed();
       return;
     }
 
@@ -172,6 +179,36 @@ export class Interaction {
       this.boats.place(x, SEA_LEVEL - 1 + BOAT_FLOAT_OFFSET, z);
       return;
     }
+  }
+
+  /**
+   * Beds occupy two cells, so this uses the normal solid-ground raycast to
+   * find the "foot" cell (like any other block placement), then snaps the
+   * player's facing direction to the nearest cardinal axis to pick the
+   * adjacent "head" cell for the pillow. Neither cell is written into the
+   * world grid - the bed is a purely visual, two-block-long entity.
+   */
+  private tryPlaceBed(): void {
+    const hit = this.raycast();
+    if (!hit) return;
+    const { x, y, z } = hit.before;
+    if (!this.world.inBounds(x, y, z)) return;
+
+    const forward = new THREE.Vector3();
+    this.camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() < 1e-6) return;
+    forward.normalize();
+
+    const dx = Math.abs(forward.x) > Math.abs(forward.z) ? Math.sign(forward.x) : 0;
+    const dz = dx === 0 ? Math.sign(forward.z) : 0;
+    const headX = x + dx;
+    const headZ = z + dz;
+    if (this.world.isSolid(headX, y, headZ)) return;
+
+    if (!this.inventory.consumeSelected()) return;
+    const yaw = Math.atan2(dx, dz);
+    this.beds.place(x + 0.5 + dx * 0.5, y, z + 0.5 + dz * 0.5, yaw);
   }
 
   /** Opens/closes the door at (x, y, z), along with any vertically adjacent door block so a 2-tall door swings as one unit. */
