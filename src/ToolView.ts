@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { BlockType, BLOCKS } from "./blocks";
+import { BlockType } from "./blocks";
 import { Tool } from "./Inventory";
+import { getBlockIconUrl } from "./textures";
 
 const REST_ROTATION = new THREE.Euler(-0.35, 0.5, 0.15);
 const SWING_ROTATION = new THREE.Euler(-1.35, 0.35, -0.2);
@@ -94,6 +95,21 @@ function buildHeldBlock(): THREE.Mesh {
   return mesh;
 }
 
+const heldBlockTextureLoader = new THREE.TextureLoader();
+const heldBlockTextureCache = new Map<BlockType, THREE.Texture>();
+
+/** Reuses each block's real painted texture (same one used for in-world faces and inventory icons) instead of a flat color. */
+function getHeldBlockTexture(block: BlockType): THREE.Texture {
+  const cached = heldBlockTextureCache.get(block);
+  if (cached) return cached;
+  const texture = heldBlockTextureLoader.load(getBlockIconUrl(block));
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  heldBlockTextureCache.set(block, texture);
+  return texture;
+}
+
 function buildSword(): THREE.Group {
   const bladeMat = new THREE.MeshLambertMaterial({ color: 0xcdd2d8 });
   const guardMat = new THREE.MeshLambertMaterial({ color: 0x8a7040 });
@@ -162,8 +178,9 @@ export class ToolView {
     this.handModel.visible = tool === null;
     this.heldBlockMesh.visible = tool === null && block !== null;
     if (block !== null) {
-      const [r, g, b] = BLOCKS[block].color;
-      (this.heldBlockMesh.material as THREE.MeshLambertMaterial).color.setRGB(r / 255, g / 255, b / 255);
+      const material = this.heldBlockMesh.material as THREE.MeshLambertMaterial;
+      material.map = getHeldBlockTexture(block);
+      material.needsUpdate = true;
     }
   }
 
