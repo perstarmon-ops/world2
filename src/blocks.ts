@@ -32,6 +32,7 @@ export enum BlockType {
   SANDSTONE = 30,
   RED_WOOL = 31,
   YELLOW_WOOL = 32,
+  BOAT = 33,
 }
 
 export interface BlockInfo {
@@ -76,7 +77,7 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.OBSIDIAN]: { name: "Obsidian", color: [38, 20, 54], solid: true, transparent: false, placeable: true, breakable: true, hardness: 3.0 },
   [BlockType.PORTAL]: { name: "Portal", color: [160, 62, 224], solid: false, transparent: true, placeable: false, breakable: false, hardness: 0 },
   [BlockType.NETHERRACK]: { name: "Netherrack", color: [111, 46, 40], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.9 },
-  [BlockType.MUSHROOM_STEM]: { name: "Mushroom Stem", color: [223, 214, 190], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
+  [BlockType.MUSHROOM_STEM]: { name: "Mushroom Stem", color: [178, 32, 32], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.MUSHROOM_CAP]: { name: "Red Mushroom Cap", color: [178, 32, 32], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.FIRE]: { name: "Fire", color: [230, 120, 30], solid: false, transparent: true, placeable: true, breakable: true, hardness: 0.1, renderAsCross: true },
   [BlockType.BED]: { name: "Bed", color: [188, 54, 54], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.4 },
@@ -84,4 +85,6 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.SANDSTONE]: { name: "Sandstone", color: [223, 210, 165], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.9 },
   [BlockType.RED_WOOL]: { name: "Red Wool", color: [200, 52, 48], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
   [BlockType.YELLOW_WOOL]: { name: "Yellow Wool", color: [222, 195, 56], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
+  // Never actually becomes a world block - placing it spawns a rideable Boat entity instead (see Interaction.place).
+  [BlockType.BOAT]: { name: "Boat", color: [140, 96, 55], solid: false, transparent: false, placeable: true, breakable: false, hardness: 0 },
 };

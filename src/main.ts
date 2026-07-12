@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { AnimalManager, NETHER_SPAWNS } from "./AnimalManager";
 import { BlockType } from "./blocks";
+import { BoatManager } from "./BoatManager";
 import { ChunkMesher } from "./ChunkMesher";
 import { DayNightCycle } from "./DayNightCycle";
 import { Interaction } from "./Interaction";
@@ -80,6 +81,8 @@ const player = new Player(camera, renderer.domElement, overworld, sfx);
 const music = new Music();
 
 const inventory = new Inventory();
+/** Boats only exist in the overworld (the nether has no water). */
+const boatManager = new BoatManager(scene);
 
 const interaction = new Interaction(
   camera,
@@ -91,6 +94,7 @@ const interaction = new Interaction(
   overworldAnimals,
   renderer.domElement,
   sfx,
+  boatManager,
 );
 
 let inNether = false;
@@ -141,6 +145,9 @@ const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 function enterDimension(next: World, nextMesher: ChunkMesher, nextAnimals: AnimalManager, goingToNether: boolean): void {
   const spawn = next.getPortalPosition();
   if (!spawn) return;
+
+  // Boats only exist in the overworld scene - riding one across dimensions would leave the player's position stuck following a boat they can no longer see.
+  if (player.isRidingBoat()) player.dismountBoat();
 
   player.setWorld(next);
   player.teleportTo(spawn[0], spawn[1], spawn[2]);
@@ -194,6 +201,13 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keydown", (e) => {
   if (e.code !== "KeyF" || !player.controls.isLocked) return;
+  if (player.isRidingBoat()) return;
+
+  const nearbyBoat = boatManager.findNearby(player.position);
+  if (nearbyBoat) {
+    player.mountBoat(nearbyBoat);
+    return;
+  }
   if (inventory.getSelectedBlock() === BlockType.MEAT && player.canEat() && inventory.consumeSelected()) {
     player.eat();
   }
@@ -232,6 +246,8 @@ function animate(): void {
       else enterDimension(nether, netherMesher, netherAnimals, true);
     }
   }
+
+  boatManager.update();
 
   const state = interaction.update(dt);
   toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked, inventory.getSelectedBlock());

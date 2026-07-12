@@ -43,4 +43,5 @@ export const RECIPES: Recipe[] = [
     output: BlockType.YELLOW_WOOL,
     outputCount: 1,
   },
+  { inputs: [{ block: BlockType.PLANK, count: 5 }], output: BlockType.BOAT, outputCount: 1 },
 ];

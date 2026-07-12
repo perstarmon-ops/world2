@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { Boat } from "./Boat";
 import { BlockType } from "./blocks";
 import { Sfx } from "./Sfx";
 import { World } from "./World";
@@ -30,6 +31,8 @@ const DOUBLE_TAP_WINDOW_MS = 350;
 const CROUCH_SPEED = 2.6;
 /** How much the camera dips while crouching. */
 const CROUCH_EYE_OFFSET = 0.3;
+
+const BOAT_SPEED = 5.5;
 
 /** Falling below this Y (out of the map bounds or through a mined hole) triggers a respawn. */
 const VOID_RESPAWN_Y = -10;
@@ -62,6 +65,7 @@ export class Player {
   private lastSpaceTapTime = 0;
   private stepDistance = 0;
   private crouching = false;
+  private riding: Boat | null = null;
   private creative = false;
   private health = MAX_HEALTH;
   private hunger = MAX_HUNGER;
@@ -88,6 +92,7 @@ export class Player {
     window.addEventListener("keydown", (e) => {
       this.keys.add(e.code);
       if (e.code === "Space" && !e.repeat && this.canFly) this.handleSpaceTap();
+      if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !e.repeat && this.riding) this.dismountBoat();
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
     // If the window loses focus mid-press (e.g. an OS prompt steals it), the
@@ -236,6 +241,12 @@ export class Player {
   update(dt: number): void {
     if (!this.controls.isLocked) return;
 
+    if (this.riding) {
+      this.updateBoat(dt);
+      this.syncCamera();
+      return;
+    }
+
     const inWater = !this.flying && this.isInWater();
 
     const forward = this.forwardVector();
@@ -329,6 +340,32 @@ export class Player {
     this.syncCamera();
   }
 
+  /** Steers the boat with WASD relative to camera-facing directions, staying confined to water; the player's position just follows along. */
+  private updateBoat(dt: number): void {
+    const boat = this.riding!;
+    const forward = this.forwardVector();
+    const right = this.rightVector();
+    const moveDir = new THREE.Vector3();
+
+    if (this.keys.has("KeyW")) moveDir.add(forward);
+    if (this.keys.has("KeyS")) moveDir.sub(forward);
+    if (this.keys.has("KeyD")) moveDir.add(right);
+    if (this.keys.has("KeyA")) moveDir.sub(right);
+
+    if (moveDir.lengthSq() > 0) {
+      moveDir.normalize().multiplyScalar(BOAT_SPEED * dt);
+      const nextX = boat.position.x + moveDir.x;
+      const nextZ = boat.position.z + moveDir.z;
+      if (this.world.getBlock(Math.floor(nextX), Math.floor(boat.position.y), Math.floor(nextZ)) === BlockType.WATER) {
+        boat.position.x = nextX;
+        boat.position.z = nextZ;
+      }
+      boat.yaw = Math.atan2(moveDir.x, moveDir.z);
+    }
+
+    this.position.copy(boat.position);
+  }
+
   /** Depletes hunger over time (faster while sprinting), starves health down to a floor when hunger runs out, and slowly regenerates health when hunger is high. Creative mode is exempt. */
   private tickVitals(dt: number, sprinting: boolean): void {
     if (this.creative) return;
@@ -384,6 +421,26 @@ export class Player {
     this.flying = enabled;
     this.creative = enabled;
     if (enabled) this.velocity.y = 0;
+  }
+
+  isRidingBoat(): boolean {
+    return this.riding !== null;
+  }
+
+  mountBoat(boat: Boat): void {
+    this.riding = boat;
+    this.velocity.set(0, 0, 0);
+    this.grounded = false;
+  }
+
+  /** Steps the player off onto the boat's deck height so they don't end up swimming immediately after exiting. */
+  dismountBoat(): void {
+    const boat = this.riding;
+    if (!boat) return;
+    this.position.copy(boat.position);
+    this.riding = null;
+    this.velocity.set(0, 0, 0);
+    this.grounded = false;
   }
 
   getHealth(): number {

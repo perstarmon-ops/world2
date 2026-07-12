@@ -2,15 +2,18 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { AnimalManager } from "./AnimalManager";
 import { BlockType, BLOCKS } from "./blocks";
+import { BOAT_FLOAT_OFFSET, BoatManager } from "./BoatManager";
 import { ChunkMesher } from "./ChunkMesher";
 import { Inventory, Tool } from "./Inventory";
 import { MobKind } from "./Mob";
 import { Player } from "./Player";
 import { raycastVoxels } from "./raycast";
 import { Sfx } from "./Sfx";
-import { World } from "./World";
+import { SEA_LEVEL, World } from "./World";
 
 const REACH = 6;
+/** How far ahead of the player, along the ground, to search for a water tile to place a boat on. */
+const BOAT_PLACE_MAX_DISTANCE = 4;
 const WATER_MINING_SPEED = 0.35;
 const TOOL_BONUS_SPEED = 2;
 /** Bare-handed mining (no tool selected) works, just slower than any tool. */
@@ -68,6 +71,7 @@ export class Interaction {
     private animals: AnimalManager,
     domElement: HTMLElement,
     private readonly sfx: Sfx,
+    private readonly boats: BoatManager,
   ) {
     const doc = domElement.ownerDocument;
     doc.addEventListener("mousedown", (e) => this.onMouseDown(e));
@@ -117,6 +121,11 @@ export class Interaction {
   }
 
   private place(): void {
+    if (this.inventory.getSelectedBlock() === BlockType.BOAT) {
+      this.tryPlaceBoat();
+      return;
+    }
+
     const hit = this.raycast();
     if (!hit) return;
 
@@ -138,6 +147,31 @@ export class Interaction {
     }
     this.mesher.rebuildAround(x, z);
     this.player.resolveOverlap();
+  }
+
+  /**
+   * Boats aren't world blocks, so this doesn't use the solid-block raycaster
+   * (which treats water as passable and won't hit it): it walks a short
+   * distance ahead of the player and places the boat on the first water
+   * tile found. Every flooded column's water surface sits at the same
+   * fixed SEA_LEVEL by construction, so no vertical search is needed.
+   */
+  private tryPlaceBoat(): void {
+    const origin = this.player.getEyePosition();
+    const direction = new THREE.Vector3();
+    this.camera.getWorldDirection(direction);
+    direction.y = 0;
+    if (direction.lengthSq() < 1e-6) return;
+    direction.normalize();
+
+    for (let dist = 1.5; dist <= BOAT_PLACE_MAX_DISTANCE; dist += 0.5) {
+      const x = origin.x + direction.x * dist;
+      const z = origin.z + direction.z * dist;
+      if (this.world.getBlock(Math.floor(x), SEA_LEVEL - 1, Math.floor(z)) !== BlockType.WATER) continue;
+      if (!this.inventory.consumeSelected()) return;
+      this.boats.place(x, SEA_LEVEL - 1 + BOAT_FLOAT_OFFSET, z);
+      return;
+    }
   }
 
   /** Opens/closes the door at (x, y, z), along with any vertically adjacent door block so a 2-tall door swings as one unit. */

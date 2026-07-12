@@ -195,6 +195,7 @@ export class UI {
         <li>Falling too far or getting hit by mobs costs health - it regenerates when well-fed</li>
         <li>Open the inventory to craft wood/stone/sand into planks/bricks/glass</li>
         <li>Hold <b>Ctrl</b> to crouch - slower, and you won't walk off the edge of a block</li>
+        <li>Craft a boat and right-click near water to place it - press <b>F</b> to board, <b>Shift</b> to get off</li>
       </ul>
     `;
     root.appendChild(this.instructions);
