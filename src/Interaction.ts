@@ -84,7 +84,15 @@ export class Interaction {
 
   private onMouseDown(e: MouseEvent): void {
     if (!this.controls.isLocked) return;
-    if (this.player.isRidingBoat() || this.player.isSleeping()) return;
+
+    // Left-click again to get off, independent of any keyboard modifier - Shift/Ctrl still work too (see Player.ts).
+    if (this.player.isRidingBoat() || this.player.isSleeping()) {
+      if (e.button === 0) {
+        if (this.player.isRidingBoat()) this.player.dismountBoat();
+        else this.player.dismountBed();
+      }
+      return;
+    }
 
     if (e.button === 0) {
       if (this.tryMountNearbyEntity()) return;

@@ -100,7 +100,9 @@ export class Player {
     window.addEventListener("keydown", (e) => {
       this.keys.add(e.code);
       if (e.code === "Space" && !e.repeat && this.canFly) this.handleSpaceTap();
-      if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !e.repeat) {
+      // Ctrl works too in case Shift is intercepted by the OS/browser on some setups (same reasoning as the flying-descend fallback).
+      const isDismountKey = e.code === "ShiftLeft" || e.code === "ShiftRight" || e.code === "ControlLeft" || e.code === "ControlRight";
+      if (isDismountKey && !e.repeat) {
         if (this.riding) this.dismountBoat();
         else if (this.sleeping) this.dismountBed();
       }
