@@ -142,6 +142,10 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.MUSHROOM_CAP, paintMushroomCap(), false);
   makeMat(BlockType.FIRE, paintFire(), true, 1);
   makeMat(BlockType.BED, paintBed(), false);
+  makeMat(BlockType.COBBLESTONE, paintTexture(BLOCKS[BlockType.COBBLESTONE].color, 26, { grain: 42 }), false);
+  makeMat(BlockType.SANDSTONE, paintTexture(BLOCKS[BlockType.SANDSTONE].color, 27, { horizontalBands: true }), false);
+  makeMat(BlockType.RED_WOOL, paintTexture(BLOCKS[BlockType.RED_WOOL].color, 28, { grain: 22 }), false);
+  makeMat(BlockType.YELLOW_WOOL, paintTexture(BLOCKS[BlockType.YELLOW_WOOL].color, 29, { grain: 22 }), false);
 
   return materials;
 }

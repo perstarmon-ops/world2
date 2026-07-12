@@ -25,4 +25,22 @@ export const RECIPES: Recipe[] = [
     outputCount: 1,
   },
   { inputs: [{ block: BlockType.PLANK, count: 3 }], output: BlockType.DOOR_CLOSED, outputCount: 1 },
+  { inputs: [{ block: BlockType.STONE, count: 1 }], output: BlockType.COBBLESTONE, outputCount: 1 },
+  { inputs: [{ block: BlockType.SAND, count: 4 }], output: BlockType.SANDSTONE, outputCount: 1 },
+  {
+    inputs: [
+      { block: BlockType.WOOL, count: 1 },
+      { block: BlockType.FLOWER_RED, count: 1 },
+    ],
+    output: BlockType.RED_WOOL,
+    outputCount: 1,
+  },
+  {
+    inputs: [
+      { block: BlockType.WOOL, count: 1 },
+      { block: BlockType.FLOWER_YELLOW, count: 1 },
+    ],
+    output: BlockType.YELLOW_WOOL,
+    outputCount: 1,
+  },
 ];

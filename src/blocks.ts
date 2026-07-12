@@ -28,6 +28,10 @@ export enum BlockType {
   MUSHROOM_CAP = 26,
   FIRE = 27,
   BED = 28,
+  COBBLESTONE = 29,
+  SANDSTONE = 30,
+  RED_WOOL = 31,
+  YELLOW_WOOL = 32,
 }
 
 export interface BlockInfo {
@@ -76,4 +80,8 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.MUSHROOM_CAP]: { name: "Red Mushroom Cap", color: [178, 32, 32], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.FIRE]: { name: "Fire", color: [230, 120, 30], solid: false, transparent: true, placeable: true, breakable: true, hardness: 0.1, renderAsCross: true },
   [BlockType.BED]: { name: "Bed", color: [188, 54, 54], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.4 },
+  [BlockType.COBBLESTONE]: { name: "Cobblestone", color: [116, 116, 112], solid: true, transparent: false, placeable: true, breakable: true, hardness: 1.1 },
+  [BlockType.SANDSTONE]: { name: "Sandstone", color: [223, 210, 165], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.9 },
+  [BlockType.RED_WOOL]: { name: "Red Wool", color: [200, 52, 48], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
+  [BlockType.YELLOW_WOOL]: { name: "Yellow Wool", color: [222, 195, 56], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
 };
