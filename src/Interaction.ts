@@ -34,14 +34,14 @@ const MINED_DROPS: Partial<Record<BlockType, BlockType>> = {
 };
 
 /** What each animal drops when killed with the sword. */
-const ANIMAL_DROPS: Partial<Record<MobKind, BlockType>> = {
-  pig: BlockType.MEAT,
-  cow: BlockType.MEAT,
-  goat: BlockType.MEAT,
-  chicken: BlockType.MEAT,
-  sheep: BlockType.WOOL,
-  hoglin: BlockType.MEAT,
-  piglin: BlockType.GOLD,
+const ANIMAL_DROPS: Partial<Record<MobKind, BlockType[]>> = {
+  pig: [BlockType.MEAT],
+  cow: [BlockType.MEAT],
+  goat: [BlockType.MEAT],
+  chicken: [BlockType.MEAT],
+  sheep: [BlockType.MEAT, BlockType.WOOL],
+  hoglin: [BlockType.MEAT],
+  piglin: [BlockType.GOLD],
 };
 
 export interface InteractionState {
@@ -97,8 +97,8 @@ export class Interaction {
     this.camera.getWorldDirection(direction);
     const killed = this.animals.tryAttack(origin, direction, REACH);
     if (killed) {
-      const drop = ANIMAL_DROPS[killed];
-      if (drop) this.inventory.add(drop);
+      const drops = ANIMAL_DROPS[killed];
+      if (drops) for (const drop of drops) this.inventory.add(drop);
     }
   }
 
