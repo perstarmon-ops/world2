@@ -194,6 +194,7 @@ export class UI {
         <li>Select meat and press <b>F</b> to eat - watch your hunger, or health stops regenerating</li>
         <li>Falling too far or getting hit by mobs costs health - it regenerates when well-fed</li>
         <li>Open the inventory to craft wood/stone/sand into planks/bricks/glass</li>
+        <li>Hold <b>Ctrl</b> to crouch - slower, and you won't walk off the edge of a block</li>
       </ul>
     `;
     root.appendChild(this.instructions);

@@ -27,6 +27,10 @@ const FLY_VERTICAL_SPEED = 6;
 /** Two Space presses within this window toggle flying on/off, like Minecraft creative mode. */
 const DOUBLE_TAP_WINDOW_MS = 350;
 
+const CROUCH_SPEED = 2.6;
+/** How much the camera dips while crouching. */
+const CROUCH_EYE_OFFSET = 0.3;
+
 /** Falling below this Y (out of the map bounds or through a mined hole) triggers a respawn. */
 const VOID_RESPAWN_Y = -10;
 
@@ -57,6 +61,7 @@ export class Player {
   private flying = false;
   private lastSpaceTapTime = 0;
   private stepDistance = 0;
+  private crouching = false;
   private creative = false;
   private health = MAX_HEALTH;
   private hunger = MAX_HUNGER;
@@ -114,7 +119,37 @@ export class Player {
   }
 
   private syncCamera(): void {
-    this.controls.object.position.set(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
+    const eyeHeight = this.crouching ? EYE_HEIGHT - CROUCH_EYE_OFFSET : EYE_HEIGHT;
+    this.controls.object.position.set(this.position.x, this.position.y + eyeHeight, this.position.z);
+  }
+
+  /** True if there's a solid block directly under any part of the player's footprint at (x, y, z). */
+  private hasGroundSupport(x: number, y: number, z: number): boolean {
+    const minX = Math.floor(x - PLAYER_RADIUS);
+    const maxX = Math.floor(x + PLAYER_RADIUS);
+    const minZ = Math.floor(z - PLAYER_RADIUS);
+    const maxZ = Math.floor(z + PLAYER_RADIUS);
+    const groundY = Math.floor(y) - 1;
+    for (let bx = minX; bx <= maxX; bx++) {
+      for (let bz = minZ; bz <= maxZ; bz++) {
+        if (this.world.isSolid(bx, groundY, bz)) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Same stepped movement as moveAxis, but refuses any step that would leave the feet unsupported - lets crouching stop right at a ledge instead of walking off it. */
+  private moveAxisGrounded(axis: "x" | "z", delta: number): void {
+    if (delta === 0) return;
+    const steps = Math.max(1, Math.ceil(Math.abs(delta) / MAX_STEP));
+    const stepDelta = delta / steps;
+    for (let i = 0; i < steps; i++) {
+      const next = { x: this.position.x, y: this.position.y, z: this.position.z };
+      next[axis] += stepDelta;
+      if (this.aabbCollides(next.x, next.y, next.z)) break;
+      if (!this.hasGroundSupport(next.x, next.y, next.z)) break;
+      this.position[axis] = next[axis];
+    }
   }
 
   private aabbCollides(x: number, y: number, z: number): boolean {
@@ -213,7 +248,9 @@ export class Player {
     if (this.keys.has("KeyA")) moveDir.sub(right);
 
     const sprinting = !this.flying && !inWater && (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"));
-    const speed = this.flying ? FLY_SPEED : inWater ? SWIM_WALK_SPEED : sprinting ? SPRINT_SPEED : WALK_SPEED;
+    const crouching = !this.flying && !inWater && (this.keys.has("ControlLeft") || this.keys.has("ControlRight"));
+    this.crouching = crouching;
+    const speed = this.flying ? FLY_SPEED : inWater ? SWIM_WALK_SPEED : crouching ? CROUCH_SPEED : sprinting ? SPRINT_SPEED : WALK_SPEED;
     if (moveDir.lengthSq() > 0) {
       moveDir.normalize().multiplyScalar(speed * dt);
     }
@@ -252,8 +289,13 @@ export class Player {
     const prevX = this.position.x;
     const prevY = this.position.y;
     const prevZ = this.position.z;
-    this.moveAxis("x", moveDir.x);
-    this.moveAxis("z", moveDir.z);
+    if (crouching && wasGrounded) {
+      this.moveAxisGrounded("x", moveDir.x);
+      this.moveAxisGrounded("z", moveDir.z);
+    } else {
+      this.moveAxis("x", moveDir.x);
+      this.moveAxis("z", moveDir.z);
+    }
     this.moveAxis("y", this.velocity.y * dt);
 
     if (this.grounded && !this.flying && !inWater) {
