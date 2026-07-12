@@ -147,8 +147,21 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.RED_WOOL, paintTexture(BLOCKS[BlockType.RED_WOOL].color, 28, { grain: 22 }), false);
   makeMat(BlockType.YELLOW_WOOL, paintTexture(BLOCKS[BlockType.YELLOW_WOOL].color, 29, { grain: 22 }), false);
   makeMat(BlockType.BOAT, paintTexture(BLOCKS[BlockType.BOAT].color, 30, { horizontalBands: true }), false);
+  makeMat(BlockType.FURNACE, paintFurnace(), false);
+  makeMat(BlockType.COOKED_MEAT, paintTexture(BLOCKS[BlockType.COOKED_MEAT].color, 31, { grain: 22 }), false);
 
   return materials;
+}
+
+/** Stone-gray block with a dark firebox opening, like an unlit furnace. */
+function paintFurnace(): HTMLCanvasElement {
+  const canvas = paintTexture(BLOCKS[BlockType.FURNACE].color, 32, { grain: 20 });
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "rgb(30, 28, 26)";
+  ctx.fillRect(5, 5, 6, 6);
+  ctx.strokeStyle = "rgba(0,0,0,0.6)";
+  ctx.strokeRect(4.5, 4.5, 7, 7);
+  return canvas;
 }
 
 /** Overlapping jagged orange/yellow flame licks on an otherwise transparent canvas, for cross-billboard fire. */

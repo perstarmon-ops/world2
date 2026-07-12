@@ -44,4 +44,10 @@ export const RECIPES: Recipe[] = [
     outputCount: 1,
   },
   { inputs: [{ block: BlockType.PLANK, count: 5 }], output: BlockType.BOAT, outputCount: 1 },
+  { inputs: [{ block: BlockType.COBBLESTONE, count: 8 }], output: BlockType.FURNACE, outputCount: 1 },
+];
+
+/** Only usable within reach of a placed Furnace block (see main.ts's near-furnace check). */
+export const SMELT_RECIPES: Recipe[] = [
+  { inputs: [{ block: BlockType.MEAT, count: 1 }], output: BlockType.COOKED_MEAT, outputCount: 1 },
 ];

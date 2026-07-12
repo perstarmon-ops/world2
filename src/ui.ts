@@ -1,5 +1,5 @@
 import { BLOCKS } from "./blocks";
-import { RECIPES } from "./Crafting";
+import { Recipe, RECIPES, SMELT_RECIPES } from "./Crafting";
 import { HOTBAR_SLOT_COUNT, Inventory, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
 import { getBlockIconUrl } from "./textures";
 
@@ -42,6 +42,8 @@ export class UI {
   private readonly hungerEls: HTMLDivElement[] = [];
   private readonly saveBtn: HTMLButtonElement;
   private readonly recipeEls: HTMLDivElement[] = [];
+  private readonly smeltEls: HTMLDivElement[] = [];
+  private nearFurnace = false;
   private inventoryOpen = false;
   private pickedSlot: number | null = null;
   private modeChosen = false;
@@ -146,33 +148,26 @@ export class UI {
     craftingPanel.innerHTML = `<h3>Crafting</h3>`;
     const recipeList = document.createElement("div");
     recipeList.className = "vc-recipe-list";
-    RECIPES.forEach((recipe) => {
-      const el = document.createElement("div");
-      el.className = "vc-recipe";
-      const inputsHtml = recipe.inputs
-        .map(
-          (input) => `
-            <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(input.block)})"></div>
-            <span class="vc-recipe-count">×${input.count}</span>
-          `,
-        )
-        .join('<span class="vc-recipe-plus">+</span>');
-      el.innerHTML = `
-        ${inputsHtml}
-        <span class="vc-recipe-arrow">&rarr;</span>
-        <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(recipe.output)})"></div>
-        <span class="vc-recipe-count">×${recipe.outputCount}</span>
-      `;
-      const inputNames = recipe.inputs.map((input) => `${BLOCKS[input.block].name} ×${input.count}`).join(" + ");
-      el.title = `${inputNames} → ${BLOCKS[recipe.output].name} ×${recipe.outputCount}`;
-      el.addEventListener("click", () => {
-        if (this.inventory.craft(recipe)) this.refreshInventory();
-      });
+    for (const recipe of RECIPES) {
+      const el = this.buildRecipeRow(recipe, () => this.inventory.craft(recipe));
       recipeList.appendChild(el);
       this.recipeEls.push(el);
-    });
+    }
     craftingPanel.appendChild(recipeList);
     content.appendChild(craftingPanel);
+
+    const smeltPanel = document.createElement("div");
+    smeltPanel.className = "vc-crafting";
+    smeltPanel.innerHTML = `<h3>Smelting</h3><p class="vc-smelt-hint">Needs a furnace nearby</p>`;
+    const smeltList = document.createElement("div");
+    smeltList.className = "vc-recipe-list";
+    for (const recipe of SMELT_RECIPES) {
+      const el = this.buildRecipeRow(recipe, () => this.nearFurnace && this.inventory.craft(recipe));
+      smeltList.appendChild(el);
+      this.smeltEls.push(el);
+    }
+    smeltPanel.appendChild(smeltList);
+    content.appendChild(smeltPanel);
 
     this.inventoryPanel.appendChild(content);
     this.inventoryPanel.addEventListener("click", (e) => e.stopPropagation());
@@ -196,6 +191,7 @@ export class UI {
         <li>Open the inventory to craft wood/stone/sand into planks/bricks/glass</li>
         <li>Hold <b>Ctrl</b> to crouch - slower, and you won't walk off the edge of a block</li>
         <li>Craft a boat and right-click near water to place it - press <b>F</b> to board, <b>Shift</b> to get off</li>
+        <li>Craft and place a furnace, then smelt meat into cooked meat - restores more hunger</li>
       </ul>
     `;
     root.appendChild(this.instructions);
@@ -340,6 +336,45 @@ export class UI {
       const has = this.inventory.isCreative() || recipe.inputs.every((input) => this.inventory.countOf(input.block) >= input.count);
       this.recipeEls[i].classList.toggle("vc-recipe-disabled", !has);
     });
+
+    SMELT_RECIPES.forEach((recipe, i) => {
+      const has =
+        this.nearFurnace &&
+        (this.inventory.isCreative() || recipe.inputs.every((input) => this.inventory.countOf(input.block) >= input.count));
+      this.smeltEls[i].classList.toggle("vc-recipe-disabled", !has);
+    });
+  }
+
+  /** Whether the player is currently within reach of a placed Furnace block; gates the smelting recipes. */
+  setNearFurnace(near: boolean): void {
+    if (this.nearFurnace === near) return;
+    this.nearFurnace = near;
+    this.refreshInventory();
+  }
+
+  private buildRecipeRow(recipe: Recipe, onCraft: () => boolean): HTMLDivElement {
+    const el = document.createElement("div");
+    el.className = "vc-recipe";
+    const inputsHtml = recipe.inputs
+      .map(
+        (input) => `
+          <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(input.block)})"></div>
+          <span class="vc-recipe-count">×${input.count}</span>
+        `,
+      )
+      .join('<span class="vc-recipe-plus">+</span>');
+    el.innerHTML = `
+      ${inputsHtml}
+      <span class="vc-recipe-arrow">&rarr;</span>
+      <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(recipe.output)})"></div>
+      <span class="vc-recipe-count">×${recipe.outputCount}</span>
+    `;
+    const inputNames = recipe.inputs.map((input) => `${BLOCKS[input.block].name} ×${input.count}`).join(" + ");
+    el.title = `${inputNames} → ${BLOCKS[recipe.output].name} ×${recipe.outputCount}`;
+    el.addEventListener("click", () => {
+      if (onCraft()) this.refreshInventory();
+    });
+    return el;
   }
 
   private paintSlot(el: HTMLDivElement, slot: ReturnType<Inventory["getSlot"]>, selected: boolean, picked = false): void {
@@ -678,8 +713,13 @@ const CSS = `
 }
 .vc-inventory-content {
   display: flex;
+  flex-wrap: wrap;
   gap: 24px;
   align-items: flex-start;
+  justify-content: center;
+  max-width: 94vw;
+  max-height: 82vh;
+  overflow-y: auto;
 }
 .vc-player-canvas {
   width: 140px;
@@ -696,6 +736,11 @@ const CSS = `
   margin: 0 0 10px;
   font-size: 16px;
   letter-spacing: 0.5px;
+}
+.vc-smelt-hint {
+  margin: -6px 0 10px;
+  font-size: 11px;
+  opacity: 0.65;
 }
 .vc-recipe-list {
   display: flex;

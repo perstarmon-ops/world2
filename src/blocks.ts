@@ -33,6 +33,8 @@ export enum BlockType {
   RED_WOOL = 31,
   YELLOW_WOOL = 32,
   BOAT = 33,
+  FURNACE = 34,
+  COOKED_MEAT = 35,
 }
 
 export interface BlockInfo {
@@ -87,4 +89,6 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.YELLOW_WOOL]: { name: "Yellow Wool", color: [222, 195, 56], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
   // Never actually becomes a world block - placing it spawns a rideable Boat entity instead (see Interaction.place).
   [BlockType.BOAT]: { name: "Boat", color: [140, 96, 55], solid: false, transparent: false, placeable: true, breakable: false, hardness: 0 },
+  [BlockType.FURNACE]: { name: "Furnace", color: [96, 96, 92], solid: true, transparent: false, placeable: true, breakable: true, hardness: 1.4 },
+  [BlockType.COOKED_MEAT]: { name: "Cooked Meat", color: [122, 66, 46], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
 };

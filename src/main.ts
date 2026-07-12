@@ -163,6 +163,26 @@ function enterDimension(next: World, nextMesher: ChunkMesher, nextAnimals: Anima
   music.setMood(goingToNether ? "nether" : "overworld");
 }
 
+const FURNACE_REACH = 3.5;
+
+/** Whether a placed Furnace block is within reach, gating the smelting recipes. */
+function isNearFurnace(): boolean {
+  const world = inNether ? nether : overworld;
+  const p = player.position;
+  const px = Math.floor(p.x);
+  const py = Math.floor(p.y);
+  const pz = Math.floor(p.z);
+  for (let dx = -3; dx <= 3; dx++) {
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dz = -3; dz <= 3; dz++) {
+        if (Math.hypot(dx, dy, dz) > FURNACE_REACH) continue;
+        if (world.getBlock(px + dx, py + dy, pz + dz) === BlockType.FURNACE) return true;
+      }
+    }
+  }
+  return false;
+}
+
 const toolView = new ToolView();
 scene.add(toolView.group);
 
@@ -199,6 +219,8 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyM") musicMuted = music.toggleMute();
 });
 
+const COOKED_FOOD_RESTORE = 10;
+
 window.addEventListener("keydown", (e) => {
   if (e.code !== "KeyF" || !player.controls.isLocked) return;
   if (player.isRidingBoat()) return;
@@ -208,7 +230,11 @@ window.addEventListener("keydown", (e) => {
     player.mountBoat(nearbyBoat);
     return;
   }
-  if (inventory.getSelectedBlock() === BlockType.MEAT && player.canEat() && inventory.consumeSelected()) {
+  const selected = inventory.getSelectedBlock();
+  if (!player.canEat()) return;
+  if (selected === BlockType.COOKED_MEAT && inventory.consumeSelected()) {
+    player.eat(COOKED_FOOD_RESTORE);
+  } else if (selected === BlockType.MEAT && inventory.consumeSelected()) {
     player.eat();
   }
 });
@@ -255,7 +281,10 @@ function animate(): void {
   ui.refreshInventory();
   ui.setHealth(player.getHealth());
   ui.setHunger(player.getHunger());
-  if (ui.isInventoryOpen()) playerPreview.update(dt);
+  if (ui.isInventoryOpen()) {
+    playerPreview.update(dt);
+    ui.setNearFurnace(isNearFurnace());
+  }
   if (state.targetBlock) {
     targetOutline.position.set(state.targetBlock.x + 0.5, state.targetBlock.y + 0.5, state.targetBlock.z + 0.5);
     targetOutline.visible = true;

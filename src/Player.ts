@@ -470,8 +470,8 @@ export class Player {
   }
 
   /** Restores hunger from eating; the caller is responsible for consuming the food item. */
-  eat(): void {
-    this.hunger = Math.min(MAX_HUNGER, this.hunger + FOOD_RESTORE);
+  eat(amount: number = FOOD_RESTORE): void {
+    this.hunger = Math.min(MAX_HUNGER, this.hunger + amount);
   }
 
   /** Moves the player to an exact position (e.g. through a portal) without carrying over momentum. */
