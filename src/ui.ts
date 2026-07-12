@@ -149,14 +149,22 @@ export class UI {
     RECIPES.forEach((recipe) => {
       const el = document.createElement("div");
       el.className = "vc-recipe";
+      const inputsHtml = recipe.inputs
+        .map(
+          (input) => `
+            <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(input.block)})"></div>
+            <span class="vc-recipe-count">×${input.count}</span>
+          `,
+        )
+        .join('<span class="vc-recipe-plus">+</span>');
       el.innerHTML = `
-        <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(recipe.input)})"></div>
-        <span class="vc-recipe-count">×${recipe.inputCount}</span>
+        ${inputsHtml}
         <span class="vc-recipe-arrow">&rarr;</span>
         <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(recipe.output)})"></div>
         <span class="vc-recipe-count">×${recipe.outputCount}</span>
       `;
-      el.title = `${BLOCKS[recipe.input].name} ×${recipe.inputCount} → ${BLOCKS[recipe.output].name} ×${recipe.outputCount}`;
+      const inputNames = recipe.inputs.map((input) => `${BLOCKS[input.block].name} ×${input.count}`).join(" + ");
+      el.title = `${inputNames} → ${BLOCKS[recipe.output].name} ×${recipe.outputCount}`;
       el.addEventListener("click", () => {
         if (this.inventory.craft(recipe)) this.refreshInventory();
       });
@@ -327,7 +335,7 @@ export class UI {
     }
 
     RECIPES.forEach((recipe, i) => {
-      const has = this.inventory.isCreative() || this.inventory.countOf(recipe.input) >= recipe.inputCount;
+      const has = this.inventory.isCreative() || recipe.inputs.every((input) => this.inventory.countOf(input.block) >= input.count);
       this.recipeEls[i].classList.toggle("vc-recipe-disabled", !has);
     });
   }
@@ -679,7 +687,7 @@ const CSS = `
   border-radius: 6px;
 }
 .vc-crafting {
-  width: 180px;
+  width: 230px;
   text-align: left;
 }
 .vc-crafting h3 {
@@ -694,6 +702,7 @@ const CSS = `
 }
 .vc-recipe {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   padding: 6px;
@@ -724,6 +733,11 @@ const CSS = `
 }
 .vc-recipe-arrow {
   opacity: 0.7;
+}
+.vc-recipe-plus {
+  opacity: 0.6;
+  font-size: 11px;
+  margin: 0 1px;
 }
 .vc-inventory-grid {
   display: grid;
