@@ -84,7 +84,10 @@ export class Interaction {
 
   private onMouseDown(e: MouseEvent): void {
     if (!this.controls.isLocked) return;
+    if (this.player.isRidingBoat() || this.player.isSleeping()) return;
+
     if (e.button === 0) {
+      if (this.tryMountNearbyEntity()) return;
       if (this.inventory.getSelectedTool() === "sword") {
         this.attack();
       } else {
@@ -93,6 +96,25 @@ export class Interaction {
     } else if (e.button === 2) {
       this.place();
     }
+  }
+
+  /** Left-clicking a placed boat or bed within reach mounts it instead of mining/attacking. */
+  private tryMountNearbyEntity(): boolean {
+    const origin = this.player.getEyePosition().clone();
+    const direction = new THREE.Vector3();
+    this.camera.getWorldDirection(direction);
+
+    const boat = this.boats.raycastHit(origin, direction, REACH);
+    if (boat) {
+      this.player.mountBoat(boat);
+      return true;
+    }
+    const bed = this.beds.raycastHit(origin, direction, REACH);
+    if (bed) {
+      this.player.mountBed(bed);
+      return true;
+    }
+    return false;
   }
 
   /** Swings the sword: always animates, kills the nearest mob in range if any, and drops meat from animals. */
@@ -185,8 +207,9 @@ export class Interaction {
    * Beds occupy two cells, so this uses the normal solid-ground raycast to
    * find the "foot" cell (like any other block placement), then snaps the
    * player's facing direction to the nearest cardinal axis to pick the
-   * adjacent "head" cell for the pillow. Neither cell is written into the
-   * world grid - the bed is a purely visual, two-block-long entity.
+   * adjacent "head" cell for the pillow. Both cells are written into the
+   * world grid as (invisible) BED blocks for real collision/mining; the
+   * visible model is a separate hand-built entity positioned on top.
    */
   private tryPlaceBed(): void {
     const hit = this.raycast();
@@ -204,11 +227,16 @@ export class Interaction {
     const dz = dx === 0 ? Math.sign(forward.z) : 0;
     const headX = x + dx;
     const headZ = z + dz;
+    if (!this.world.inBounds(headX, y, headZ)) return;
     if (this.world.isSolid(headX, y, headZ)) return;
 
     if (!this.inventory.consumeSelected()) return;
     const yaw = Math.atan2(dx, dz);
-    this.beds.place(x + 0.5 + dx * 0.5, y, z + 0.5 + dz * 0.5, yaw);
+    this.world.setBlock(x, y, z, BlockType.BED);
+    this.world.setBlock(headX, y, headZ, BlockType.BED);
+    this.mesher.rebuildAround(x, z);
+    this.mesher.rebuildAround(headX, headZ);
+    this.beds.place(x, y, z, headX, headZ, x + 0.5 + dx * 0.5, z + 0.5 + dz * 0.5, yaw);
   }
 
   /** Opens/closes the door at (x, y, z), along with any vertically adjacent door block so a 2-tall door swings as one unit. */
@@ -295,6 +323,13 @@ export class Interaction {
           if (neighbor === BlockType.DOOR_CLOSED || neighbor === BlockType.DOOR_OPEN) {
             this.world.setBlock(hit.block.x, ny, hit.block.z, BlockType.AIR);
           }
+        }
+      }
+      if (blockType === BlockType.BED) {
+        const pair = this.beds.removeAt(hit.block.x, hit.block.y, hit.block.z);
+        if (pair) {
+          this.world.setBlock(pair.x, pair.y, pair.z, BlockType.AIR);
+          this.mesher.rebuildAround(pair.x, pair.z);
         }
       }
       this.mesher.rebuildAround(hit.block.x, hit.block.z);

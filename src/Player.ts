@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { Bed } from "./Bed";
 import { Boat } from "./Boat";
 import { BlockType } from "./blocks";
 import { Sfx } from "./Sfx";
@@ -33,6 +34,12 @@ const CROUCH_SPEED = 2.6;
 const CROUCH_EYE_OFFSET = 0.3;
 
 const BOAT_SPEED = 5.5;
+/** Sitting low in the hull instead of standing height. */
+const BOAT_EYE_HEIGHT = 0.9;
+/** Lying flat instead of standing height. */
+const BED_EYE_HEIGHT = 0.35;
+/** Fixed "looking mostly up" pitch while lying in bed - the view is locked, like real Minecraft's sleep camera. */
+const SLEEP_PITCH = -1.3;
 
 /** Falling below this Y (out of the map bounds or through a mined hole) triggers a respawn. */
 const VOID_RESPAWN_Y = -10;
@@ -66,6 +73,7 @@ export class Player {
   private stepDistance = 0;
   private crouching = false;
   private riding: Boat | null = null;
+  private sleeping: Bed | null = null;
   private creative = false;
   private health = MAX_HEALTH;
   private hunger = MAX_HUNGER;
@@ -92,7 +100,10 @@ export class Player {
     window.addEventListener("keydown", (e) => {
       this.keys.add(e.code);
       if (e.code === "Space" && !e.repeat && this.canFly) this.handleSpaceTap();
-      if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !e.repeat && this.riding) this.dismountBoat();
+      if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !e.repeat) {
+        if (this.riding) this.dismountBoat();
+        else if (this.sleeping) this.dismountBed();
+      }
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
     // If the window loses focus mid-press (e.g. an OS prompt steals it), the
@@ -124,7 +135,13 @@ export class Player {
   }
 
   private syncCamera(): void {
-    const eyeHeight = this.crouching ? EYE_HEIGHT - CROUCH_EYE_OFFSET : EYE_HEIGHT;
+    const eyeHeight = this.sleeping
+      ? BED_EYE_HEIGHT
+      : this.riding
+        ? BOAT_EYE_HEIGHT
+        : this.crouching
+          ? EYE_HEIGHT - CROUCH_EYE_OFFSET
+          : EYE_HEIGHT;
     this.controls.object.position.set(this.position.x, this.position.y + eyeHeight, this.position.z);
   }
 
@@ -240,6 +257,15 @@ export class Player {
 
   update(dt: number): void {
     if (!this.controls.isLocked) return;
+
+    if (this.sleeping) {
+      // View is locked while lying down - overrides whatever the mouse would
+      // otherwise have applied this frame (controls.enabled is also off, so
+      // this is really just a static pose, not a per-frame necessity).
+      this.camera.rotation.set(SLEEP_PITCH, this.sleeping.group.rotation.y, 0, "YXZ");
+      this.syncCamera();
+      return;
+    }
 
     if (this.riding) {
       this.updateBoat(dt);
@@ -440,6 +466,28 @@ export class Player {
     this.position.copy(boat.position);
     this.riding = null;
     this.velocity.set(0, 0, 0);
+    this.grounded = false;
+  }
+
+  isSleeping(): boolean {
+    return this.sleeping !== null;
+  }
+
+  /** Lies the player down on the bed: locks the view (like real Minecraft's sleep camera) and disables movement. */
+  mountBed(bed: Bed): void {
+    this.sleeping = bed;
+    this.velocity.set(0, 0, 0);
+    this.grounded = false;
+    this.controls.enabled = false;
+  }
+
+  /** Stands the player back up next to the bed and restores normal mouse-look. */
+  dismountBed(): void {
+    const bed = this.sleeping;
+    if (!bed) return;
+    this.position.set(bed.group.position.x, bed.group.position.y, bed.group.position.z);
+    this.sleeping = null;
+    this.controls.enabled = true;
     this.grounded = false;
   }
 

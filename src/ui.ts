@@ -190,7 +190,8 @@ export class UI {
         <li>Falling too far or getting hit by mobs costs health - it regenerates when well-fed</li>
         <li>Open the inventory to craft wood/stone/sand into planks/bricks/glass</li>
         <li>Hold <b>Ctrl</b> to crouch - slower, and you won't walk off the edge of a block</li>
-        <li>Craft a boat and right-click near water to place it - press <b>F</b> to board, <b>Shift</b> to get off</li>
+        <li>Craft a boat and right-click near water to place it - click it or press <b>F</b> to board, <b>Shift</b> to get off</li>
+        <li>Beds and boats now block movement - click a bed to lie down (locks your view), <b>Shift</b> to get up</li>
         <li>Craft and place a furnace, then smelt meat into cooked meat - restores more hunger</li>
       </ul>
     `;

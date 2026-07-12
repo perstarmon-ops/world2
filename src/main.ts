@@ -149,8 +149,9 @@ function enterDimension(next: World, nextMesher: ChunkMesher, nextAnimals: Anima
   const spawn = next.getPortalPosition();
   if (!spawn) return;
 
-  // Boats only exist in the overworld scene - riding one across dimensions would leave the player's position stuck following a boat they can no longer see.
+  // Boats/beds only exist in the overworld scene - staying mounted across dimensions would leave the player's position stuck following an entity they can no longer see.
   if (player.isRidingBoat()) player.dismountBoat();
+  if (player.isSleeping()) player.dismountBed();
 
   player.setWorld(next);
   player.teleportTo(spawn[0], spawn[1], spawn[2]);
@@ -226,7 +227,7 @@ const COOKED_FOOD_RESTORE = 10;
 
 window.addEventListener("keydown", (e) => {
   if (e.code !== "KeyF" || !player.controls.isLocked) return;
-  if (player.isRidingBoat()) return;
+  if (player.isRidingBoat() || player.isSleeping()) return;
 
   const nearbyBoat = boatManager.findNearby(player.position);
   if (nearbyBoat) {
@@ -277,6 +278,7 @@ function animate(): void {
   }
 
   boatManager.update();
+  if (!inNether) boatManager.pushPlayerAway(player);
 
   const state = interaction.update(dt);
   toolView.update(dt, camera, state.mining, inventory.getSelectedTool(), state.attacked, inventory.getSelectedBlock());

@@ -159,7 +159,7 @@ export class ChunkMesher {
       for (let z = startZ; z < endZ; z++) {
         for (let y = 0; y < WORLD_HEIGHT; y++) {
           const block = this.world.getBlock(x, y, z);
-          if (block === BlockType.AIR) continue;
+          if (block === BlockType.AIR || BLOCKS[block].hideMesh) continue;
 
           if (BLOCKS[block].renderAsCross) {
             const key2 = materialKeyFor(block, [0, 1, 0]);
