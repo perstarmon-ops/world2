@@ -141,6 +141,7 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.MUSHROOM_STEM, paintTexture(BLOCKS[BlockType.MUSHROOM_STEM].color, 22, { grain: 8 }), false);
   makeMat(BlockType.MUSHROOM_CAP, paintMushroomCap(), false);
   makeMat(BlockType.FIRE, paintFire(), true, 1);
+  makeMat(BlockType.BED, paintBed(), false);
 
   return materials;
 }
@@ -178,6 +179,15 @@ function paintFire(): HTMLCanvasElement {
   ctx.closePath();
   ctx.fill();
 
+  return canvas;
+}
+
+/** Red blanket with a pale pillow stripe along one edge. */
+function paintBed(): HTMLCanvasElement {
+  const canvas = paintTexture(BLOCKS[BlockType.BED].color, 25, { grain: 10 });
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "rgb(232, 228, 220)";
+  ctx.fillRect(1, 1, TEXTURE_SIZE - 2, 4);
   return canvas;
 }
 
@@ -304,24 +314,9 @@ function paintFlower(color: [number, number, number]): HTMLCanvasElement {
   return canvas;
 }
 
+/** Plain dirt on every side face - only the top face reads as grass. */
 function paintGrassSide(): HTMLCanvasElement {
-  const dirt = BLOCKS[BlockType.DIRT].color;
-  const grass = BLOCKS[BlockType.GRASS].color;
-  const canvas = document.createElement("canvas");
-  canvas.width = TEXTURE_SIZE;
-  canvas.height = TEXTURE_SIZE;
-  const ctx = canvas.getContext("2d")!;
-  const rand = mulberry32(5);
-  for (let y = 0; y < TEXTURE_SIZE; y++) {
-    for (let x = 0; x < TEXTURE_SIZE; x++) {
-      const variance = (rand() - 0.5) * 18;
-      const base = y < 4 ? grass : dirt;
-      const [r, g, b] = shade(base, variance);
-      ctx.fillStyle = `rgb(${r | 0}, ${g | 0}, ${b | 0})`;
-      ctx.fillRect(x, y, 1, 1);
-    }
-  }
-  return canvas;
+  return paintTexture(BLOCKS[BlockType.DIRT].color, 5, { grain: 18 });
 }
 
 function paintWoodSide(): HTMLCanvasElement {

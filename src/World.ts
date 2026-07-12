@@ -8,6 +8,8 @@ export const WORLD_CHUNKS_Z = 8;
 export const WORLD_SIZE_X = CHUNK_SIZE * WORLD_CHUNKS_X;
 export const WORLD_SIZE_Z = CHUNK_SIZE * WORLD_CHUNKS_Z;
 export const SEA_LEVEL = 17;
+/** Shifts terrain height up from sea level so land is the majority of the map instead of ~half being flooded. */
+const TERRAIN_HEIGHT_BIAS = 8;
 const DIAMOND_MAX_Y = 14;
 const DIAMOND_CHANCE = 0.0015;
 const GOLD_MAX_Y = 22;
@@ -153,7 +155,7 @@ export class World {
       for (let z = 0; z < this.sizeZ; z++) {
         const base = noise2D(x * 0.012, z * 0.012);
         const detail = detail2D(x * 0.05, z * 0.05);
-        const h = Math.floor(SEA_LEVEL + base * 14 + detail * 4);
+        const h = Math.floor(SEA_LEVEL + TERRAIN_HEIGHT_BIAS + base * 14 + detail * 4);
         const height = Math.max(3, Math.min(this.height - 6, h));
         this.heightmap[z * this.sizeX + x] = height;
 
