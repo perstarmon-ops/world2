@@ -35,6 +35,7 @@ export enum BlockType {
   BOAT = 33,
   FURNACE = 34,
   COOKED_MEAT = 35,
+  CHEST = 36,
 }
 
 export interface BlockInfo {
@@ -94,4 +95,5 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.BOAT]: { name: "Boat", color: [140, 96, 55], solid: false, transparent: false, placeable: true, breakable: false, hardness: 0 },
   [BlockType.FURNACE]: { name: "Furnace", color: [96, 96, 92], solid: true, transparent: false, placeable: true, breakable: true, hardness: 1.4 },
   [BlockType.COOKED_MEAT]: { name: "Cooked Meat", color: [122, 66, 46], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
+  [BlockType.CHEST]: { name: "Chest", color: [130, 90, 48], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.7 },
 };

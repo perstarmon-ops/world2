@@ -3,6 +3,7 @@ import { AnimalManager, NETHER_SPAWNS } from "./AnimalManager";
 import { BedManager } from "./BedManager";
 import { BlockType } from "./blocks";
 import { BoatManager } from "./BoatManager";
+import { ChestManager } from "./ChestManager";
 import { ChunkMesher } from "./ChunkMesher";
 import { DayNightCycle } from "./DayNightCycle";
 import { Interaction } from "./Interaction";
@@ -85,6 +86,7 @@ const inventory = new Inventory();
 /** Boats only exist in the overworld (the nether has no water). */
 const boatManager = new BoatManager(scene);
 const bedManager = new BedManager(scene);
+const chestManager = new ChestManager();
 
 const interaction = new Interaction(
   camera,
@@ -98,6 +100,11 @@ const interaction = new Interaction(
   sfx,
   boatManager,
   bedManager,
+  chestManager,
+  (x, y, z) => {
+    ui.openChestView(chestManager.getOrCreate(x, y, z));
+    player.controls.unlock();
+  },
 );
 
 let inNether = false;
@@ -117,7 +124,7 @@ const ui = new UI(
   },
   savedGame
     ? () => {
-        applySave(savedGame, player, inventory, overworld, nether);
+        applySave(savedGame, player, inventory, overworld, nether, chestManager);
         overworldMesher.buildAll();
         netherMesher.buildAll();
 
@@ -140,7 +147,7 @@ const ui = new UI(
         ui.setVitalsVisible(savedGame.mode !== "creative");
       }
     : null,
-  () => saveGame(currentMode, inNether ? "nether" : "overworld", player, inventory, overworld, nether),
+  () => saveGame(currentMode, inNether ? "nether" : "overworld", player, inventory, overworld, nether, chestManager),
 );
 const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 

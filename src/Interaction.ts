@@ -4,8 +4,9 @@ import { AnimalManager } from "./AnimalManager";
 import { BedManager } from "./BedManager";
 import { BlockType, BLOCKS } from "./blocks";
 import { BOAT_FLOAT_OFFSET, BoatManager } from "./BoatManager";
+import { ChestManager } from "./ChestManager";
 import { ChunkMesher } from "./ChunkMesher";
-import { Inventory, Tool } from "./Inventory";
+import { Inventory, SlotContent, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
 import { MobKind } from "./Mob";
 import { Player } from "./Player";
 import { raycastVoxels } from "./raycast";
@@ -74,6 +75,8 @@ export class Interaction {
     private readonly sfx: Sfx,
     private readonly boats: BoatManager,
     private readonly beds: BedManager,
+    private readonly chests: ChestManager,
+    private readonly onOpenChest: (x: number, y: number, z: number) => void,
   ) {
     const doc = domElement.ownerDocument;
     doc.addEventListener("mousedown", (e) => this.onMouseDown(e));
@@ -171,6 +174,10 @@ export class Interaction {
       this.toggleDoor(hit.block.x, hit.block.y, hit.block.z);
       return;
     }
+    if (targetType === BlockType.CHEST) {
+      this.onOpenChest(hit.block.x, hit.block.y, hit.block.z);
+      return;
+    }
 
     const blockType = this.inventory.getSelectedBlock();
     if (blockType === null) return;
@@ -261,6 +268,23 @@ export class Interaction {
     this.mesher.rebuildAround(x, z);
   }
 
+  /** Returns a mined chest's contents to the player: resources merge into existing stacks, tools go into the first empty slot. */
+  private dumpChestContents(slots: SlotContent[]): void {
+    for (const slot of slots) {
+      if (!slot) continue;
+      if (slot.kind === "resource") {
+        for (let i = 0; i < slot.count; i++) this.inventory.add(slot.block);
+      } else {
+        for (let i = 0; i < TOTAL_SLOT_COUNT; i++) {
+          if (this.inventory.getSlot(i) === null) {
+            this.inventory.setSlot(i, slot);
+            break;
+          }
+        }
+      }
+    }
+  }
+
   private raycast() {
     const origin = this.player.getEyePosition().clone();
     const direction = new THREE.Vector3();
@@ -339,6 +363,10 @@ export class Interaction {
           this.world.setBlock(pair.x, pair.y, pair.z, BlockType.AIR);
           this.mesher.rebuildAround(pair.x, pair.z);
         }
+      }
+      if (blockType === BlockType.CHEST) {
+        const contents = this.chests.remove(hit.block.x, hit.block.y, hit.block.z);
+        if (contents) this.dumpChestContents(contents);
       }
       this.mesher.rebuildAround(hit.block.x, hit.block.z);
       this.inventory.add(MINED_DROPS[blockType] ?? blockType);

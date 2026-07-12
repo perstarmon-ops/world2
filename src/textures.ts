@@ -149,8 +149,25 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.BOAT, paintTexture(BLOCKS[BlockType.BOAT].color, 30, { horizontalBands: true }), false);
   makeMat(BlockType.FURNACE, paintFurnace(), false);
   makeMat(BlockType.COOKED_MEAT, paintTexture(BLOCKS[BlockType.COOKED_MEAT].color, 31, { grain: 22 }), false);
+  makeMat(BlockType.CHEST, paintChest(), false);
 
   return materials;
+}
+
+/** Wooden planks with a dark seam down the middle and a small metal latch, like a closed chest lid. */
+function paintChest(): HTMLCanvasElement {
+  const canvas = paintTexture(BLOCKS[BlockType.CHEST].color, 33, { horizontalBands: true });
+  const ctx = canvas.getContext("2d")!;
+  ctx.strokeStyle = "rgba(50, 32, 16, 0.85)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(1.5, 1.5, TEXTURE_SIZE - 3, TEXTURE_SIZE - 3);
+  ctx.beginPath();
+  ctx.moveTo(0, 7.5);
+  ctx.lineTo(TEXTURE_SIZE, 7.5);
+  ctx.stroke();
+  ctx.fillStyle = "rgb(214, 190, 90)";
+  ctx.fillRect(7, 6, 2, 3);
+  return canvas;
 }
 
 /** Stone-gray block with a dark firebox opening, like an unlit furnace. */

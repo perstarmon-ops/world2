@@ -1,3 +1,4 @@
+import { ChestManager } from "./ChestManager";
 import { Inventory, SlotContent } from "./Inventory";
 import { Player } from "./Player";
 import { World } from "./World";
@@ -11,6 +12,8 @@ export interface SaveData {
   inventory: SlotContent[];
   overworldBlocks: string;
   netherBlocks: string;
+  /** Optional so saves made before chests existed still load fine. */
+  chests?: { x: number; y: number; z: number; slots: SlotContent[] }[];
 }
 
 function toBase64(data: Uint8Array): string {
@@ -37,6 +40,7 @@ export function saveGame(
   inventory: Inventory,
   overworld: World,
   nether: World,
+  chests: ChestManager,
 ): void {
   const data: SaveData = {
     mode,
@@ -51,6 +55,7 @@ export function saveGame(
     inventory: inventory.getSlotsSnapshot(),
     overworldBlocks: toBase64(overworld.getBlocksSnapshot()),
     netherBlocks: toBase64(nether.getBlocksSnapshot()),
+    chests: chests.getSnapshot(),
   };
   localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
@@ -73,6 +78,7 @@ export function applySave(
   inventory: Inventory,
   overworld: World,
   nether: World,
+  chests: ChestManager,
 ): void {
   overworld.loadBlocksSnapshot(fromBase64(data.overworldBlocks));
   nether.loadBlocksSnapshot(fromBase64(data.netherBlocks));
@@ -80,4 +86,5 @@ export function applySave(
   inventory.setCreativeMode(data.mode === "creative");
   player.teleportTo(data.player.x, data.player.y, data.player.z);
   player.setVitals(data.player.health, data.player.hunger);
+  chests.loadSnapshot(data.chests ?? []);
 }

@@ -1,7 +1,15 @@
 import { BLOCKS } from "./blocks";
+import { CHEST_SLOT_COUNT } from "./ChestManager";
 import { Recipe, RECIPES, SMELT_RECIPES } from "./Crafting";
-import { HOTBAR_SLOT_COUNT, Inventory, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
+import { HOTBAR_SLOT_COUNT, Inventory, SlotContent, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
 import { getBlockIconUrl } from "./textures";
+
+/** Identifies a slot for picking/swapping: either one of the player's own slots, or a slot in the currently open chest. */
+type SlotLocation = { source: "player" | "chest"; index: number };
+
+function sameLocation(a: SlotLocation | null, b: SlotLocation): boolean {
+  return a !== null && a.source === b.source && a.index === b.index;
+}
 
 const TOOL_ICONS: Record<Tool, string> = {
   pickaxe: "⛏",
@@ -43,9 +51,12 @@ export class UI {
   private readonly saveBtn: HTMLButtonElement;
   private readonly recipeEls: HTMLDivElement[] = [];
   private readonly smeltEls: HTMLDivElement[] = [];
+  private readonly chestPanel: HTMLDivElement;
+  private readonly chestEls: HTMLDivElement[] = [];
+  private chestSlots: SlotContent[] | null = null;
   private nearFurnace = false;
   private inventoryOpen = false;
-  private pickedSlot: number | null = null;
+  private pickedSlot: SlotLocation | null = null;
   private modeChosen = false;
   private readonly modeSelect: HTMLDivElement;
 
@@ -122,9 +133,10 @@ export class UI {
     const storageGrid = document.createElement("div");
     storageGrid.className = "vc-inventory-grid";
     for (let i = HOTBAR_SLOT_COUNT; i < TOTAL_SLOT_COUNT; i++) {
-      const el = buildSlotEl(i + 1, () => this.onInventorySlotClick(i));
+      const loc: SlotLocation = { source: "player", index: i };
+      const el = buildSlotEl(i + 1, () => this.onSlotClick(loc));
       el.classList.add("vc-inv-slot");
-      this.wireDrag(el, i);
+      this.wireDrag(el, loc);
       storageGrid.appendChild(el);
       this.invEls[i] = el;
     }
@@ -133,15 +145,32 @@ export class UI {
     const hotbarGrid = document.createElement("div");
     hotbarGrid.className = "vc-inventory-grid";
     for (let i = 0; i < HOTBAR_SLOT_COUNT; i++) {
-      const el = buildSlotEl(i + 1, () => this.onInventorySlotClick(i));
+      const loc: SlotLocation = { source: "player", index: i };
+      const el = buildSlotEl(i + 1, () => this.onSlotClick(loc));
       el.classList.add("vc-inv-slot");
-      this.wireDrag(el, i);
+      this.wireDrag(el, loc);
       hotbarGrid.appendChild(el);
       this.invEls[i] = el;
     }
     gridWrap.appendChild(hotbarGrid);
 
     content.appendChild(gridWrap);
+
+    this.chestPanel = document.createElement("div");
+    this.chestPanel.className = "vc-chest-panel vc-hidden";
+    this.chestPanel.innerHTML = `<h3>Chest</h3>`;
+    const chestGrid = document.createElement("div");
+    chestGrid.className = "vc-inventory-grid";
+    for (let i = 0; i < CHEST_SLOT_COUNT; i++) {
+      const loc: SlotLocation = { source: "chest", index: i };
+      const el = buildSlotEl(i + 1, () => this.onSlotClick(loc));
+      el.classList.add("vc-inv-slot");
+      this.wireDrag(el, loc);
+      chestGrid.appendChild(el);
+      this.chestEls.push(el);
+    }
+    this.chestPanel.appendChild(chestGrid);
+    content.appendChild(this.chestPanel);
 
     const craftingPanel = document.createElement("div");
     craftingPanel.className = "vc-crafting";
@@ -193,6 +222,7 @@ export class UI {
         <li>Craft a boat and right-click near water to place it - click it or press <b>F</b> to board, click again (or <b>Shift</b>) to get off</li>
         <li>Beds and boats block movement - click a bed to lie down (locks your view), click again (or <b>Shift</b>) to get up</li>
         <li>Craft and place a furnace, then smelt meat into cooked meat - restores more hunger</li>
+        <li>Craft and place a chest, then right-click it to store and retrieve items</li>
       </ul>
     `;
     root.appendChild(this.instructions);
@@ -266,31 +296,52 @@ export class UI {
     this.refreshInventory();
   }
 
-  private onInventorySlotClick(index: number): void {
+  private getSlotContent(loc: SlotLocation): SlotContent {
+    if (loc.source === "player") return this.inventory.getSlot(loc.index);
+    return this.chestSlots ? this.chestSlots[loc.index] : null;
+  }
+
+  private setSlotContent(loc: SlotLocation, content: SlotContent): void {
+    if (loc.source === "player") this.inventory.setSlot(loc.index, content);
+    else if (this.chestSlots) this.chestSlots[loc.index] = content;
+  }
+
+  /** Swaps two slots, which may be in the player's inventory, the open chest, or one of each. */
+  private swapSlots(a: SlotLocation, b: SlotLocation): void {
+    const tmp = this.getSlotContent(a);
+    this.setSlotContent(a, this.getSlotContent(b));
+    this.setSlotContent(b, tmp);
+  }
+
+  private onSlotClick(loc: SlotLocation): void {
     if (this.pickedSlot === null) {
-      this.pickedSlot = index;
-    } else if (this.pickedSlot === index) {
+      this.pickedSlot = loc;
+    } else if (sameLocation(this.pickedSlot, loc)) {
       this.pickedSlot = null;
     } else {
-      this.inventory.swap(this.pickedSlot, index);
+      this.swapSlots(this.pickedSlot, loc);
       this.pickedSlot = null;
     }
     this.refreshInventory();
   }
 
   /** Lets a slot be picked up and dragged onto another to swap them, as an alternative to click-then-click. */
-  private wireDrag(el: HTMLDivElement, index: number): void {
+  private wireDrag(el: HTMLDivElement, loc: SlotLocation): void {
     el.draggable = true;
     el.addEventListener("dragstart", (e) => {
-      e.dataTransfer?.setData("text/plain", String(index));
-      this.pickedSlot = index;
+      e.dataTransfer?.setData("text/plain", JSON.stringify(loc));
+      this.pickedSlot = loc;
       this.refreshInventory();
     });
     el.addEventListener("dragover", (e) => e.preventDefault());
     el.addEventListener("drop", (e) => {
       e.preventDefault();
-      const fromIndex = Number(e.dataTransfer?.getData("text/plain"));
-      if (!Number.isNaN(fromIndex) && fromIndex !== index) this.inventory.swap(fromIndex, index);
+      try {
+        const from = JSON.parse(e.dataTransfer?.getData("text/plain") ?? "null") as SlotLocation | null;
+        if (from && !sameLocation(from, loc)) this.swapSlots(from, loc);
+      } catch {
+        // Ignore malformed drag payloads (e.g. a drop from outside the game).
+      }
       this.pickedSlot = null;
       this.refreshInventory();
     });
@@ -300,10 +351,11 @@ export class UI {
     });
   }
 
-  /** Opens/closes the inventory screen. Returns the new open state. */
+  /** Opens/closes the inventory screen. Closing also closes any open chest view. Returns the new open state. */
   toggleInventory(): boolean {
     this.inventoryOpen = !this.inventoryOpen;
     this.pickedSlot = null;
+    if (!this.inventoryOpen) this.closeChestView();
     this.inventoryPanel.classList.toggle("vc-hidden", !this.inventoryOpen);
     this.refreshInventory();
     return this.inventoryOpen;
@@ -311,6 +363,27 @@ export class UI {
 
   isInventoryOpen(): boolean {
     return this.inventoryOpen;
+  }
+
+  /** Opens a chest's slots alongside the player's own inventory, e.g. when right-clicking a placed chest. */
+  openChestView(slots: SlotContent[]): void {
+    this.chestSlots = slots;
+    this.pickedSlot = null;
+    this.chestPanel.classList.remove("vc-hidden");
+    if (!this.inventoryOpen) {
+      this.inventoryOpen = true;
+      this.inventoryPanel.classList.remove("vc-hidden");
+    }
+    this.refreshInventory();
+  }
+
+  private closeChestView(): void {
+    this.chestSlots = null;
+    this.chestPanel.classList.add("vc-hidden");
+  }
+
+  isChestOpen(): boolean {
+    return this.chestSlots !== null;
   }
 
   isModeChosen(): boolean {
@@ -330,7 +403,13 @@ export class UI {
       if (i < HOTBAR_SLOT_COUNT) {
         this.paintSlot(this.hotbarEls[i], slotData, i === selected);
       }
-      this.paintSlot(this.invEls[i], slotData, i === selected, i === this.pickedSlot);
+      this.paintSlot(this.invEls[i], slotData, i === selected, sameLocation(this.pickedSlot, { source: "player", index: i }));
+    }
+
+    if (this.chestSlots) {
+      for (let i = 0; i < CHEST_SLOT_COUNT; i++) {
+        this.paintSlot(this.chestEls[i], this.chestSlots[i] ?? null, false, sameLocation(this.pickedSlot, { source: "chest", index: i }));
+      }
     }
 
     RECIPES.forEach((recipe, i) => {
@@ -791,6 +870,17 @@ const CSS = `
   display: grid;
   grid-template-columns: repeat(9, 64px);
   gap: 10px;
+}
+.vc-chest-panel {
+  text-align: left;
+}
+.vc-chest-panel.vc-hidden {
+  display: none;
+}
+.vc-chest-panel h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  letter-spacing: 0.5px;
 }
 .vc-inv-slot {
   width: 64px;

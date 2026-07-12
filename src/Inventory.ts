@@ -59,6 +59,12 @@ export class Inventory {
     return this.slots[index] ?? null;
   }
 
+  /** Direct slot write, e.g. for swapping items with a chest's separate slot array. */
+  setSlot(index: number, content: SlotContent): void {
+    if (index < 0 || index >= TOTAL_SLOT_COUNT) return;
+    this.slots[index] = content;
+  }
+
   getSelectedIndex(): number {
     return this.selected;
   }
