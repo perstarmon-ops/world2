@@ -1,4 +1,5 @@
 import { BlockType, BLOCKS } from "./blocks";
+import { Recipe } from "./Crafting";
 
 export type Tool = "pickaxe" | "axe" | "shovel" | "sword";
 
@@ -130,5 +131,29 @@ export class Inventory {
       const slot = slots[i];
       this.slots[i] = slot ? { ...slot } : null;
     }
+  }
+
+  /** Total count of `block` held across every slot. */
+  countOf(block: BlockType): number {
+    return this.slots.reduce((total, slot) => total + (slot?.kind === "resource" && slot.block === block ? slot.count : 0), 0);
+  }
+
+  /** Consumes the recipe's input and adds its output; no-op (returns false) if there isn't enough input. Creative mode always succeeds without depleting. */
+  craft(recipe: Recipe): boolean {
+    if (!this.creative && this.countOf(recipe.input) < recipe.inputCount) return false;
+    if (!this.creative) {
+      let remaining = recipe.inputCount;
+      for (let i = 0; i < this.slots.length && remaining > 0; i++) {
+        const slot = this.slots[i];
+        if (slot?.kind === "resource" && slot.block === recipe.input) {
+          const take = Math.min(slot.count, remaining);
+          slot.count -= take;
+          remaining -= take;
+          if (slot.count <= 0) this.slots[i] = null;
+        }
+      }
+    }
+    for (let i = 0; i < recipe.outputCount; i++) this.add(recipe.output);
+    return true;
   }
 }

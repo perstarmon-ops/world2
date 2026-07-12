@@ -1,4 +1,5 @@
 import { BLOCKS } from "./blocks";
+import { RECIPES } from "./Crafting";
 import { HOTBAR_SLOT_COUNT, Inventory, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
 import { getBlockIconUrl } from "./textures";
 
@@ -40,6 +41,7 @@ export class UI {
   private readonly healthEls: HTMLDivElement[] = [];
   private readonly hungerEls: HTMLDivElement[] = [];
   private readonly saveBtn: HTMLButtonElement;
+  private readonly recipeEls: HTMLDivElement[] = [];
   private inventoryOpen = false;
   private pickedSlot: number | null = null;
   private modeChosen = false;
@@ -138,6 +140,32 @@ export class UI {
     gridWrap.appendChild(hotbarGrid);
 
     content.appendChild(gridWrap);
+
+    const craftingPanel = document.createElement("div");
+    craftingPanel.className = "vc-crafting";
+    craftingPanel.innerHTML = `<h3>Crafting</h3>`;
+    const recipeList = document.createElement("div");
+    recipeList.className = "vc-recipe-list";
+    RECIPES.forEach((recipe) => {
+      const el = document.createElement("div");
+      el.className = "vc-recipe";
+      el.innerHTML = `
+        <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(recipe.input)})"></div>
+        <span class="vc-recipe-count">×${recipe.inputCount}</span>
+        <span class="vc-recipe-arrow">&rarr;</span>
+        <div class="vc-recipe-icon" style="background-image:url(${getBlockIconUrl(recipe.output)})"></div>
+        <span class="vc-recipe-count">×${recipe.outputCount}</span>
+      `;
+      el.title = `${BLOCKS[recipe.input].name} ×${recipe.inputCount} → ${BLOCKS[recipe.output].name} ×${recipe.outputCount}`;
+      el.addEventListener("click", () => {
+        if (this.inventory.craft(recipe)) this.refreshInventory();
+      });
+      recipeList.appendChild(el);
+      this.recipeEls.push(el);
+    });
+    craftingPanel.appendChild(recipeList);
+    content.appendChild(craftingPanel);
+
     this.inventoryPanel.appendChild(content);
     this.inventoryPanel.addEventListener("click", (e) => e.stopPropagation());
     root.appendChild(this.inventoryPanel);
@@ -157,6 +185,7 @@ export class UI {
         <li>Select a mined block to place it</li>
         <li>Select meat and press <b>F</b> to eat - watch your hunger, or health stops regenerating</li>
         <li>Falling too far or getting hit by mobs costs health - it regenerates when well-fed</li>
+        <li>Open the inventory to craft wood/stone/sand into planks/bricks/glass</li>
       </ul>
     `;
     root.appendChild(this.instructions);
@@ -296,6 +325,11 @@ export class UI {
       }
       this.paintSlot(this.invEls[i], slotData, i === selected, i === this.pickedSlot);
     }
+
+    RECIPES.forEach((recipe, i) => {
+      const has = this.inventory.isCreative() || this.inventory.countOf(recipe.input) >= recipe.inputCount;
+      this.recipeEls[i].classList.toggle("vc-recipe-disabled", !has);
+    });
   }
 
   private paintSlot(el: HTMLDivElement, slot: ReturnType<Inventory["getSlot"]>, selected: boolean, picked = false): void {
@@ -643,6 +677,53 @@ const CSS = `
   background: rgba(255,255,255,0.06);
   border: 2px solid rgba(255,255,255,0.35);
   border-radius: 6px;
+}
+.vc-crafting {
+  width: 180px;
+  text-align: left;
+}
+.vc-crafting h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+.vc-recipe-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vc-recipe {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.vc-recipe:hover {
+  background: rgba(255,255,255,0.14);
+}
+.vc-recipe.vc-recipe-disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+.vc-recipe-icon {
+  width: 24px;
+  height: 24px;
+  background-size: cover;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+.vc-recipe-count {
+  font-size: 12px;
+  font-family: monospace;
+}
+.vc-recipe-arrow {
+  opacity: 0.7;
 }
 .vc-inventory-grid {
   display: grid;
