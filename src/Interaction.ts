@@ -6,6 +6,7 @@ import { BlockType, BLOCKS } from "./blocks";
 import { BOAT_FLOAT_OFFSET, BoatManager } from "./BoatManager";
 import { ChestManager } from "./ChestManager";
 import { ChunkMesher } from "./ChunkMesher";
+import { FallingSandManager } from "./FallingSandManager";
 import { Inventory, SlotContent, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
 import { MobKind } from "./Mob";
 import { Player } from "./Player";
@@ -77,6 +78,7 @@ export class Interaction {
     private readonly beds: BedManager,
     private readonly chests: ChestManager,
     private readonly onOpenChest: (x: number, y: number, z: number) => void,
+    private readonly fallingSand: FallingSandManager,
   ) {
     const doc = domElement.ownerDocument;
     doc.addEventListener("mousedown", (e) => this.onMouseDown(e));
@@ -191,6 +193,7 @@ export class Interaction {
     }
     this.mesher.rebuildAround(x, z);
     this.player.resolveOverlap();
+    if (blockType === BlockType.SAND) this.fallingSand.checkAndDrop(this.world, this.mesher, x, y, z);
   }
 
   /**
@@ -262,10 +265,16 @@ export class Interaction {
     const next = current === BlockType.DOOR_CLOSED ? BlockType.DOOR_OPEN : BlockType.DOOR_CLOSED;
 
     this.world.setBlock(x, y, z, next);
+    let topY = y;
     for (const ny of [y - 1, y + 1]) {
-      if (isDoor(this.world.getBlock(x, ny, z))) this.world.setBlock(x, ny, z, next);
+      if (isDoor(this.world.getBlock(x, ny, z))) {
+        this.world.setBlock(x, ny, z, next);
+        topY = Math.max(topY, ny);
+      }
     }
     this.mesher.rebuildAround(x, z);
+    // An opened door is no longer solid, so anything resting on top of it (e.g. sand) can now fall.
+    if (next === BlockType.DOOR_OPEN) this.fallingSand.checkAndDrop(this.world, this.mesher, x, topY + 1, z);
   }
 
   /** Returns a mined chest's contents to the player: resources merge into existing stacks, tools go into the first empty slot. */
@@ -298,12 +307,16 @@ export class Interaction {
     this.mesher = mesher;
     this.animals = animals;
     this.resetMining();
+    // In-flight falling sand is tied to the world/mesher it was falling in - drop it rather than let it update against the wrong dimension.
+    this.fallingSand.clear();
   }
 
   /** Advances the mining timer against whatever block is under the crosshair; returns the current visual state. */
   update(dt: number): InteractionState {
     const attacked = this.attackedThisFrame;
     this.attackedThisFrame = false;
+
+    this.fallingSand.update(dt, this.world, this.mesher);
 
     if (!this.controls.isLocked) {
       this.resetMining();
@@ -349,11 +362,13 @@ export class Interaction {
 
     if (this.miningProgress >= hardness) {
       this.world.setBlock(hit.block.x, hit.block.y, hit.block.z, BlockType.AIR);
+      this.fallingSand.checkAndDrop(this.world, this.mesher, hit.block.x, hit.block.y + 1, hit.block.z);
       if (blockType === BlockType.DOOR_CLOSED || blockType === BlockType.DOOR_OPEN) {
         for (const ny of [hit.block.y - 1, hit.block.y + 1]) {
           const neighbor = this.world.getBlock(hit.block.x, ny, hit.block.z);
           if (neighbor === BlockType.DOOR_CLOSED || neighbor === BlockType.DOOR_OPEN) {
             this.world.setBlock(hit.block.x, ny, hit.block.z, BlockType.AIR);
+            this.fallingSand.checkAndDrop(this.world, this.mesher, hit.block.x, ny + 1, hit.block.z);
           }
         }
       }
@@ -362,6 +377,7 @@ export class Interaction {
         if (pair) {
           this.world.setBlock(pair.x, pair.y, pair.z, BlockType.AIR);
           this.mesher.rebuildAround(pair.x, pair.z);
+          this.fallingSand.checkAndDrop(this.world, this.mesher, pair.x, pair.y + 1, pair.z);
         }
       }
       if (blockType === BlockType.CHEST) {

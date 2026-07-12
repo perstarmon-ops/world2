@@ -6,6 +6,7 @@ import { BoatManager } from "./BoatManager";
 import { ChestManager } from "./ChestManager";
 import { ChunkMesher } from "./ChunkMesher";
 import { DayNightCycle } from "./DayNightCycle";
+import { FallingSandManager } from "./FallingSandManager";
 import { Interaction } from "./Interaction";
 import { Inventory } from "./Inventory";
 import { Music } from "./Music";
@@ -87,6 +88,7 @@ const inventory = new Inventory();
 const boatManager = new BoatManager(scene);
 const bedManager = new BedManager(scene);
 const chestManager = new ChestManager();
+const fallingSandManager = new FallingSandManager(scene);
 
 const interaction = new Interaction(
   camera,
@@ -105,6 +107,7 @@ const interaction = new Interaction(
     ui.openChestView(chestManager.getOrCreate(x, y, z));
     player.controls.unlock();
   },
+  fallingSandManager,
 );
 
 let inNether = false;
