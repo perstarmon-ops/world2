@@ -169,10 +169,6 @@ export class Interaction {
       this.tryPlaceBed();
       return;
     }
-    if (selected === BlockType.DOOR_CLOSED) {
-      this.tryPlaceDoor();
-      return;
-    }
 
     const hit = this.raycast();
     if (!hit) return;
@@ -184,6 +180,10 @@ export class Interaction {
     }
     if (targetType === BlockType.CHEST) {
       this.onOpenChest(hit.block.x, hit.block.y, hit.block.z);
+      return;
+    }
+    if (selected === BlockType.DOOR_CLOSED) {
+      this.tryPlaceDoor();
       return;
     }
 

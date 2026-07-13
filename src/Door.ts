@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { BlockType } from "./blocks";
+import { getBlockIconUrl } from "./textures";
 
 /** Slightly under a full cell so it doesn't clip into the frame on either side. */
 const DOOR_WIDTH = 0.95;
@@ -9,9 +11,22 @@ const OPEN_ANGLE = Math.PI / 2;
 /** Radians per second - a quick, snappy swing rather than a slow creak. */
 const SWING_SPEED = Math.PI * 2.4;
 
+let doorMaterial: THREE.MeshLambertMaterial | null = null;
+
+/** Reuses the door's real painted texture (same one used for in-world faces and inventory icons) instead of a flat color. */
+function getDoorMaterial(): THREE.MeshLambertMaterial {
+  if (!doorMaterial) {
+    const texture = new THREE.TextureLoader().load(getBlockIconUrl(BlockType.DOOR_CLOSED));
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    doorMaterial = new THREE.MeshLambertMaterial({ map: texture });
+  }
+  return doorMaterial;
+}
+
 function buildDoorModel(): THREE.Mesh {
-  const material = new THREE.MeshLambertMaterial({ color: 0x8c6842 });
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(DOOR_WIDTH, DOOR_HEIGHT, DOOR_THICKNESS), material);
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(DOOR_WIDTH, DOOR_HEIGHT, DOOR_THICKNESS), getDoorMaterial());
   // Offset so the mesh's own left edge sits at the group's local origin (the hinge line).
   mesh.position.set(DOOR_WIDTH / 2, DOOR_HEIGHT / 2, 0);
   return mesh;
