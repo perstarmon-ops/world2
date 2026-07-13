@@ -10,6 +10,7 @@ import { DoorManager } from "./DoorManager";
 import { FallingSandManager } from "./FallingSandManager";
 import { Interaction } from "./Interaction";
 import { Inventory } from "./Inventory";
+import { MobileControls } from "./MobileControls";
 import { Music } from "./Music";
 import { Player } from "./Player";
 import { PlayerPreview } from "./PlayerPreview";
@@ -127,6 +128,7 @@ const ui = new UI(
     currentMode = mode;
     player.setFlying(mode === "creative");
     ui.setVitalsVisible(mode !== "creative");
+    mobileControls.activate();
   },
   savedGame
     ? () => {
@@ -151,11 +153,13 @@ const ui = new UI(
         currentMode = savedGame.mode;
         player.setFlying(savedGame.mode === "creative");
         ui.setVitalsVisible(savedGame.mode !== "creative");
+        mobileControls.activate();
       }
     : null,
   () => saveGame(currentMode, inNether ? "nether" : "overworld", player, inventory, overworld, nether, chestManager),
 );
 const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
+const mobileControls = new MobileControls(camera, player, interaction, ui, app);
 
 /** Swaps which dimension the player, interaction, mesher visibility, and animals target. */
 function enterDimension(next: World, nextMesher: ChunkMesher, nextAnimals: AnimalManager, goingToNether: boolean): void {
@@ -213,7 +217,7 @@ scene.add(targetOutline);
 app.addEventListener("click", () => {
   music.start();
   sfx.start();
-  if (ui.isModeChosen() && !ui.isInventoryOpen()) player.controls.lock();
+  if (ui.isModeChosen() && !ui.isInventoryOpen() && !mobileControls.isActive()) player.controls.lock();
 });
 player.controls.addEventListener("lock", () => ui.setLocked(true));
 player.controls.addEventListener("unlock", () => {

@@ -91,26 +91,35 @@ export class Interaction {
 
   private onMouseDown(e: MouseEvent): void {
     if (!this.controls.isLocked) return;
+    if (e.button === 0) this.startMining();
+    else if (e.button === 2) this.triggerPlace();
+  }
 
+  /**
+   * Left mouse button / mine-button press: gets off a boat or bed if
+   * already mounted, mounts a nearby one, attacks with a sword, or starts
+   * mining. Shared by the real mouse handler and touch controls.
+   */
+  startMining(): void {
     // Left-click again to get off, independent of any keyboard modifier - Shift/Ctrl still work too (see Player.ts).
     if (this.player.isRidingBoat() || this.player.isSleeping()) {
-      if (e.button === 0) {
-        if (this.player.isRidingBoat()) this.player.dismountBoat();
-        else this.player.dismountBed();
-      }
+      if (this.player.isRidingBoat()) this.player.dismountBoat();
+      else this.player.dismountBed();
       return;
     }
 
-    if (e.button === 0) {
-      if (this.tryMountNearbyEntity()) return;
-      if (this.inventory.getSelectedTool() === "sword") {
-        this.attack();
-      } else {
-        this.isLeftDown = true;
-      }
-    } else if (e.button === 2) {
-      this.place();
+    if (this.tryMountNearbyEntity()) return;
+    if (this.inventory.getSelectedTool() === "sword") {
+      this.attack();
+    } else {
+      this.isLeftDown = true;
     }
+  }
+
+  /** Right mouse button / build-button press: places a block or interacts with a door/chest. Does nothing while riding a boat or sleeping. */
+  triggerPlace(): void {
+    if (this.player.isRidingBoat() || this.player.isSleeping()) return;
+    this.place();
   }
 
   /** Left-clicking a placed boat or bed within reach mounts it instead of mining/attacking. */
@@ -146,10 +155,12 @@ export class Interaction {
   }
 
   private onMouseUp(e: MouseEvent): void {
-    if (e.button === 0) {
-      this.isLeftDown = false;
-      this.resetMining();
-    }
+    if (e.button === 0) this.stopMining();
+  }
+
+  /** Left mouse button / mine-button release: stops mining. Shared by the real mouse handler and touch controls. */
+  stopMining(): void {
+    this.resetMining();
   }
 
   private resetMining(): void {

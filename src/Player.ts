@@ -114,6 +114,12 @@ export class Player {
     window.addEventListener("blur", () => this.keys.clear());
   }
 
+  /** Simulates a keyboard key being held/released - lets touch controls (e.g. a virtual thumbstick) drive the same movement code as the keyboard. */
+  setVirtualKey(code: string, held: boolean): void {
+    if (held) this.keys.add(code);
+    else this.keys.delete(code);
+  }
+
   /** Double-tapping Space toggles flying on/off, like Minecraft creative mode. */
   private handleSpaceTap(): void {
     const now = performance.now();
