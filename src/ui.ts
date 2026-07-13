@@ -21,6 +21,8 @@ const TOOL_ICONS: Record<Tool, string> = {
 /** Each heart/drumstick icon represents 2 points of health/hunger, out of a max of 20. */
 const VITAL_ICON_COUNT = 10;
 const VITAL_POINTS_PER_ICON = 2;
+/** How many hotbar slots stay visible in compact (mobile) mode - the rest are still selectable, just hidden. */
+const COMPACT_HOTBAR_SLOT_COUNT = 6;
 
 function buildSlotEl(key: number, onClick: () => void): HTMLDivElement {
   const el = document.createElement("div");
@@ -490,6 +492,13 @@ export class UI {
     this.instructions.classList.toggle("vc-hidden", locked);
   }
 
+  /** Mobile screens are tight on space, so only the first COMPACT_HOTBAR_SLOT_COUNT hotbar slots show - the rest stay selectable (e.g. by number key on a hardware keyboard) but visually hidden. */
+  setCompactHotbar(compact: boolean): void {
+    for (let i = COMPACT_HOTBAR_SLOT_COUNT; i < HOTBAR_SLOT_COUNT; i++) {
+      this.hotbarEls[i].classList.toggle("vc-hidden", compact);
+    }
+  }
+
   private flashSaved(): void {
     this.saveBtn.textContent = "Saved!";
     window.setTimeout(() => {
@@ -636,6 +645,9 @@ const CSS = `
 .vc-slot.vc-picked {
   border-color: #ffd24d;
   box-shadow: 0 0 10px rgba(255,210,77,0.9);
+}
+.vc-slot.vc-hidden {
+  display: none;
 }
 .vc-slot-empty {
   opacity: 0.45;

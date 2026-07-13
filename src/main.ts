@@ -273,6 +273,7 @@ function animate(): void {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
   player.update(dt);
+  mobileControls.update();
 
   if (inNether) {
     scene.background = NETHER_SKY;

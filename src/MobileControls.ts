@@ -23,13 +23,16 @@ export function isTouchDevice(): boolean {
  */
 export class MobileControls {
   private readonly root: HTMLDivElement;
+  private readonly gameplayControls: HTMLDivElement;
   private readonly stickBase: HTMLDivElement;
   private readonly stickKnob: HTMLDivElement;
+  private readonly inventoryBtn: HTMLButtonElement;
   private stickTouchId: number | null = null;
   private lookTouchId: number | null = null;
   private lastLookX = 0;
   private lastLookY = 0;
   private active = false;
+  private wasInventoryOpen = false;
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -45,20 +48,27 @@ export class MobileControls {
     this.root = document.createElement("div");
     this.root.className = "vc-touch-controls vc-hidden";
     this.root.innerHTML = `
-      <div class="vc-touch-stick-base">
-        <div class="vc-touch-stick-knob"></div>
-      </div>
-      <div class="vc-touch-buttons">
-        <button class="vc-touch-btn vc-touch-mine" aria-label="Mine">⛏</button>
-        <button class="vc-touch-btn vc-touch-build" aria-label="Build">🧱</button>
+      <button class="vc-touch-btn vc-touch-inventory" aria-label="Inventory">🎒</button>
+      <div class="vc-touch-gameplay">
+        <div class="vc-touch-stick-base">
+          <div class="vc-touch-stick-knob"></div>
+        </div>
+        <div class="vc-touch-buttons">
+          <button class="vc-touch-btn vc-touch-jump" aria-label="Jump">⬆</button>
+          <button class="vc-touch-btn vc-touch-mine" aria-label="Mine">⛏</button>
+          <button class="vc-touch-btn vc-touch-build" aria-label="Build">🧱</button>
+        </div>
       </div>
     `;
     domElement.appendChild(this.root);
+    this.gameplayControls = this.root.querySelector(".vc-touch-gameplay")!;
     this.stickBase = this.root.querySelector(".vc-touch-stick-base")!;
     this.stickKnob = this.root.querySelector(".vc-touch-stick-knob")!;
+    this.inventoryBtn = this.root.querySelector(".vc-touch-inventory")!;
 
     this.wireStick();
     this.wireButtons();
+    this.wireInventoryButton();
     this.wireLook(domElement);
   }
 
@@ -68,11 +78,22 @@ export class MobileControls {
     this.active = true;
     this.player.controls.isLocked = true;
     this.ui.setLocked(true);
+    this.ui.setCompactHotbar(true);
     this.root.classList.remove("vc-hidden");
   }
 
   isActive(): boolean {
     return this.active;
+  }
+
+  /** Called every frame: hides the stick/action buttons while the inventory is open, however it got opened (the inventory button, or interacting with a chest). */
+  update(): void {
+    if (!this.active) return;
+    const open = this.ui.isInventoryOpen();
+    if (open !== this.wasInventoryOpen) {
+      this.gameplayControls.classList.toggle("vc-hidden", open);
+      this.wasInventoryOpen = open;
+    }
   }
 
   private wireStick(): void {
@@ -107,6 +128,7 @@ export class MobileControls {
     };
 
     this.stickBase.addEventListener("touchstart", (e) => {
+      if (this.ui.isInventoryOpen()) return;
       e.preventDefault();
       e.stopPropagation();
       const touch = e.changedTouches[0];
@@ -131,10 +153,25 @@ export class MobileControls {
   }
 
   private wireButtons(): void {
+    const jumpBtn = this.root.querySelector<HTMLButtonElement>(".vc-touch-jump")!;
     const mineBtn = this.root.querySelector<HTMLButtonElement>(".vc-touch-mine")!;
     const buildBtn = this.root.querySelector<HTMLButtonElement>(".vc-touch-build")!;
 
+    jumpBtn.addEventListener("touchstart", (e) => {
+      if (this.ui.isInventoryOpen()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.player.setVirtualKey("Space", true);
+    });
+    const stopJump = (e: TouchEvent): void => {
+      e.stopPropagation();
+      this.player.setVirtualKey("Space", false);
+    };
+    jumpBtn.addEventListener("touchend", stopJump);
+    jumpBtn.addEventListener("touchcancel", stopJump);
+
     mineBtn.addEventListener("touchstart", (e) => {
+      if (this.ui.isInventoryOpen()) return;
       e.preventDefault();
       e.stopPropagation();
       this.interaction.startMining();
@@ -147,22 +184,32 @@ export class MobileControls {
     mineBtn.addEventListener("touchcancel", stopMine);
 
     buildBtn.addEventListener("touchstart", (e) => {
+      if (this.ui.isInventoryOpen()) return;
       e.preventDefault();
       e.stopPropagation();
       this.interaction.triggerPlace();
     });
   }
 
+  private wireInventoryButton(): void {
+    this.inventoryBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.ui.toggleInventory();
+    });
+  }
+
   /** Dragging anywhere outside the stick/buttons rotates the camera; touches that start on them are stopped from propagating here so they don't also register as a look-drag. */
   private wireLook(domElement: HTMLElement): void {
     domElement.addEventListener("touchstart", (e) => {
-      if (this.lookTouchId !== null) return;
+      if (this.lookTouchId !== null || this.ui.isInventoryOpen()) return;
       const touch = e.changedTouches[0];
       this.lookTouchId = touch.identifier;
       this.lastLookX = touch.clientX;
       this.lastLookY = touch.clientY;
     });
     domElement.addEventListener("touchmove", (e) => {
+      if (this.ui.isInventoryOpen()) return;
       for (const touch of Array.from(e.changedTouches)) {
         if (touch.identifier !== this.lookTouchId) continue;
         const dx = touch.clientX - this.lastLookX;
@@ -202,6 +249,14 @@ const CSS = `
 }
 .vc-touch-controls.vc-hidden {
   display: none;
+}
+.vc-touch-gameplay.vc-hidden {
+  display: none;
+}
+.vc-touch-inventory {
+  position: absolute;
+  left: 20px;
+  top: 84px;
 }
 .vc-touch-stick-base {
   position: absolute;
