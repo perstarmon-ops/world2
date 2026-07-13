@@ -491,6 +491,9 @@ export class Player {
     this.sleeping = null;
     this.controls.enabled = true;
     this.grounded = false;
+    // The bed's own cells are solid, so standing back up at its position starts out
+    // embedded in them - pop up onto its top surface instead of being stuck inside.
+    this.resolveOverlap();
   }
 
   getHealth(): number {
