@@ -305,7 +305,7 @@ function animate(): void {
   ui.setHealth(player.getHealth());
   ui.setHunger(player.getHunger());
   if (ui.isInventoryOpen()) {
-    playerPreview.update(dt);
+    if (!mobileControls.isActive()) playerPreview.update(dt);
     ui.setNearFurnace(isNearFurnace());
   }
   if (state.targetBlock) {

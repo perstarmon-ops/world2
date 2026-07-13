@@ -492,6 +492,11 @@ export class UI {
     this.instructions.classList.toggle("vc-hidden", locked);
   }
 
+  /** The player preview eats most of a narrow mobile screen's height, pushing the actual grid/crafting content below the fold - skip it there. */
+  setPreviewVisible(visible: boolean): void {
+    this.previewCanvas.classList.toggle("vc-hidden", !visible);
+  }
+
   /** Mobile screens are tight on space, so only the first COMPACT_HOTBAR_SLOT_COUNT hotbar slots show - the rest stay selectable (e.g. by number key on a hardware keyboard) but visually hidden. */
   setCompactHotbar(compact: boolean): void {
     for (let i = COMPACT_HOTBAR_SLOT_COUNT; i < HOTBAR_SLOT_COUNT; i++) {
@@ -819,6 +824,9 @@ const CSS = `
   background: rgba(255,255,255,0.06);
   border: 2px solid rgba(255,255,255,0.35);
   border-radius: 6px;
+}
+.vc-player-canvas.vc-hidden {
+  display: none;
 }
 .vc-crafting {
   width: 230px;

@@ -458,6 +458,17 @@ export class Player {
     if (enabled) this.velocity.y = 0;
   }
 
+  /** Toggles flying on/off (a no-op outside creative mode) without touching whether it's allowed at all - a single-press alternative to the double-tap-Space toggle, for mobile's jump button. */
+  toggleFlying(): void {
+    if (!this.canFly) return;
+    this.flying = !this.flying;
+    this.velocity.y = 0;
+  }
+
+  isFlying(): boolean {
+    return this.flying;
+  }
+
   isRidingBoat(): boolean {
     return this.riding !== null;
   }

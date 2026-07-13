@@ -79,6 +79,7 @@ export class MobileControls {
     this.player.controls.isLocked = true;
     this.ui.setLocked(true);
     this.ui.setCompactHotbar(true);
+    this.ui.setPreviewVisible(false);
     this.root.classList.remove("vc-hidden");
   }
 
@@ -161,6 +162,10 @@ export class MobileControls {
       if (this.ui.isInventoryOpen()) return;
       e.preventDefault();
       e.stopPropagation();
+      // In creative, each press flips flying on/off (a no-op in survival) - a single-tap
+      // alternative to the desktop double-tap-Space, since a virtual button doesn't
+      // carry the same "quick double press" feel as a physical key.
+      this.player.toggleFlying();
       this.player.setVirtualKey("Space", true);
     });
     const stopJump = (e: TouchEvent): void => {
@@ -243,7 +248,8 @@ const CSS = `
 .vc-touch-controls {
   position: fixed;
   inset: 0;
-  z-index: 18;
+  /* Above .vc-inventory (z-index 25) so the inventory-toggle button stays reachable while the inventory panel is open, instead of being covered by it. */
+  z-index: 26;
   pointer-events: none;
   touch-action: none;
 }
