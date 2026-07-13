@@ -77,8 +77,9 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.GOLD]: { name: "Gold", color: [244, 202, 66], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.5 },
   [BlockType.WOOL]: { name: "Wool", color: [235, 232, 224], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
   [BlockType.PATH]: { name: "Path", color: [176, 150, 105], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.4 },
-  [BlockType.DOOR_CLOSED]: { name: "Door", color: [140, 104, 66], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.6 },
-  [BlockType.DOOR_OPEN]: { name: "Door (Open)", color: [140, 104, 66], solid: false, transparent: true, placeable: false, breakable: true, hardness: 0.6 },
+  // Occupies real cells for collision/mining, but the visible model is a separate hand-built Door entity (see Interaction.tryPlaceDoor/DoorManager).
+  [BlockType.DOOR_CLOSED]: { name: "Door", color: [140, 104, 66], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.6, hideMesh: true },
+  [BlockType.DOOR_OPEN]: { name: "Door (Open)", color: [140, 104, 66], solid: false, transparent: true, placeable: false, breakable: true, hardness: 0.6, hideMesh: true },
   [BlockType.OBSIDIAN]: { name: "Obsidian", color: [38, 20, 54], solid: true, transparent: false, placeable: true, breakable: true, hardness: 3.0 },
   [BlockType.PORTAL]: { name: "Portal", color: [160, 62, 224], solid: false, transparent: true, placeable: false, breakable: false, hardness: 0 },
   [BlockType.NETHERRACK]: { name: "Netherrack", color: [111, 46, 40], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.9 },

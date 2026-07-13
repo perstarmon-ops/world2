@@ -6,6 +6,7 @@ import { BlockType, BLOCKS } from "./blocks";
 import { BOAT_FLOAT_OFFSET, BoatManager } from "./BoatManager";
 import { ChestManager } from "./ChestManager";
 import { ChunkMesher } from "./ChunkMesher";
+import { DoorManager } from "./DoorManager";
 import { FallingSandManager } from "./FallingSandManager";
 import { Inventory, SlotContent, Tool, TOTAL_SLOT_COUNT } from "./Inventory";
 import { MobKind } from "./Mob";
@@ -79,6 +80,7 @@ export class Interaction {
     private readonly chests: ChestManager,
     private readonly onOpenChest: (x: number, y: number, z: number) => void,
     private readonly fallingSand: FallingSandManager,
+    private readonly doors: DoorManager,
   ) {
     const doc = domElement.ownerDocument;
     doc.addEventListener("mousedown", (e) => this.onMouseDown(e));
@@ -167,6 +169,10 @@ export class Interaction {
       this.tryPlaceBed();
       return;
     }
+    if (selected === BlockType.DOOR_CLOSED) {
+      this.tryPlaceDoor();
+      return;
+    }
 
     const hit = this.raycast();
     if (!hit) return;
@@ -188,9 +194,6 @@ export class Interaction {
 
     if (!this.inventory.consumeSelected()) return;
     this.world.setBlock(x, y, z, blockType);
-    if (blockType === BlockType.DOOR_CLOSED && this.world.getBlock(x, y + 1, z) === BlockType.AIR) {
-      this.world.setBlock(x, y + 1, z, BlockType.DOOR_CLOSED);
-    }
     this.mesher.rebuildAround(x, z);
     this.player.resolveOverlap();
     if (blockType === BlockType.SAND) this.fallingSand.checkAndDrop(this.world, this.mesher, x, y, z);
@@ -257,6 +260,49 @@ export class Interaction {
     this.beds.place(x, y, z, headX, headZ, x + 0.5 + dx * 0.5, z + 0.5 + dz * 0.5, yaw);
   }
 
+  /**
+   * Doors occupy two cells like beds, so this uses the normal solid-ground
+   * raycast to find the "foot" cell, then snaps the player's facing
+   * direction to the nearest cardinal axis to orient the door flush with
+   * whichever wall it's filling a gap in (the axis the player is looking
+   * across) and picks a hinge edge so it swings away from the player. Both
+   * cells are written into the world grid as (invisible) DOOR_CLOSED blocks
+   * for real collision/mining; the visible model is a separate hand-built
+   * entity that pivots and animates open/closed.
+   */
+  private tryPlaceDoor(): void {
+    const hit = this.raycast();
+    if (!hit) return;
+    const { x, y, z } = hit.before;
+    if (!this.world.inBounds(x, y, z)) return;
+    if (this.world.getBlock(x, y + 1, z) !== BlockType.AIR) return;
+
+    const forward = new THREE.Vector3();
+    this.camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() < 1e-6) return;
+    forward.normalize();
+
+    // Facing along Z means the gap blocks movement in Z, so the wall runs along X (and vice versa).
+    const facingZ = Math.abs(forward.z) >= Math.abs(forward.x);
+    const baseYaw = facingZ ? 0 : -Math.PI / 2;
+    const swingSign: 1 | -1 = facingZ
+      ? Math.sign(forward.z) >= 0
+        ? -1
+        : 1
+      : Math.sign(forward.x) >= 0
+        ? 1
+        : -1;
+    const hingeX = facingZ ? x : x + 0.5;
+    const hingeZ = facingZ ? z + 0.5 : z;
+
+    if (!this.inventory.consumeSelected()) return;
+    this.world.setBlock(x, y, z, BlockType.DOOR_CLOSED);
+    this.world.setBlock(x, y + 1, z, BlockType.DOOR_CLOSED);
+    this.mesher.rebuildAround(x, z);
+    this.doors.place(x, y, z, hingeX, hingeZ, baseYaw, swingSign);
+  }
+
   /** Opens/closes the door at (x, y, z), along with any vertically adjacent door block so a 2-tall door swings as one unit. */
   private toggleDoor(x: number, y: number, z: number): void {
     const isDoor = (b: BlockType) => b === BlockType.DOOR_CLOSED || b === BlockType.DOOR_OPEN;
@@ -273,6 +319,7 @@ export class Interaction {
       }
     }
     this.mesher.rebuildAround(x, z);
+    this.doors.setOpen(x, y, z, next === BlockType.DOOR_OPEN);
     // An opened door is no longer solid, so anything resting on top of it (e.g. sand) can now fall.
     if (next === BlockType.DOOR_OPEN) this.fallingSand.checkAndDrop(this.world, this.mesher, x, topY + 1, z);
   }
@@ -317,6 +364,7 @@ export class Interaction {
     this.attackedThisFrame = false;
 
     this.fallingSand.update(dt, this.world, this.mesher);
+    this.doors.update(dt);
 
     if (!this.controls.isLocked) {
       this.resetMining();
@@ -371,6 +419,7 @@ export class Interaction {
             this.fallingSand.checkAndDrop(this.world, this.mesher, hit.block.x, ny + 1, hit.block.z);
           }
         }
+        this.doors.remove(hit.block.x, hit.block.y, hit.block.z);
       }
       if (blockType === BlockType.BED) {
         const pair = this.beds.removeAt(hit.block.x, hit.block.y, hit.block.z);
