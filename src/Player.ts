@@ -384,7 +384,8 @@ export class Player {
       moveDir.normalize().multiplyScalar(BOAT_SPEED * dt);
       const nextX = boat.position.x + moveDir.x;
       const nextZ = boat.position.z + moveDir.z;
-      if (this.world.getBlock(Math.floor(nextX), Math.floor(boat.position.y), Math.floor(nextZ)) === BlockType.WATER) {
+      // The boat's own Y sits just above the water surface (see BOAT_FLOAT_OFFSET), so the water cell itself is one below that.
+      if (this.world.getBlock(Math.floor(nextX), Math.floor(boat.position.y) - 1, Math.floor(nextZ)) === BlockType.WATER) {
         boat.position.x = nextX;
         boat.position.z = nextZ;
       }
