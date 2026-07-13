@@ -53,18 +53,27 @@ export class FallingSandManager {
 
       const cellX = Math.floor(sand.position.x);
       const cellZ = Math.floor(sand.position.z);
-      const fromCellY = Math.floor(sand.position.y - 0.5);
       const newY = sand.position.y + sand.velocityY * dt;
-      const toCellY = Math.floor(newY - 0.5);
+
+      // A resting block's bottom face sits exactly on an integer "ground" height (the
+      // top of whatever it's resting on). Landing this frame means that height lies
+      // between the block's old and new bottom-face position - not merely that the
+      // new position's naive floor() dropped a cell, which would trigger a whole
+      // cell early on the very first frame (a lone block only 1 cell above the
+      // ground would then "land" in a single ~16ms tick instead of visibly falling).
+      const oldBottom = sand.position.y - 0.5;
+      const newBottom = newY - 0.5;
+      const highestGround = Math.floor(oldBottom);
+      const lowestGround = Math.ceil(newBottom);
 
       let landedAt: number | null = null;
-      for (let cy = fromCellY; cy >= Math.max(toCellY, 0); cy--) {
-        if (world.isSolid(cellX, cy - 1, cellZ)) {
-          landedAt = cy;
+      for (let groundTop = highestGround; groundTop >= Math.max(lowestGround, 0); groundTop--) {
+        if (world.isSolid(cellX, groundTop - 1, cellZ)) {
+          landedAt = groundTop;
           break;
         }
       }
-      if (landedAt === null && toCellY <= 0) landedAt = 0;
+      if (landedAt === null && lowestGround <= 0) landedAt = 0;
 
       if (landedAt !== null) {
         this.scene.remove(sand.mesh);
