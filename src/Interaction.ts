@@ -219,7 +219,8 @@ export class Interaction {
       const z = origin.z + direction.z * dist;
       if (this.world.getBlock(Math.floor(x), SEA_LEVEL - 1, Math.floor(z)) !== BlockType.WATER) continue;
       if (!this.inventory.consumeSelected()) return;
-      this.boats.place(x, SEA_LEVEL - 1 + BOAT_FLOAT_OFFSET, z);
+      // Water fills cells up through SEA_LEVEL - 1, so its surface (the top face of that cell) is at SEA_LEVEL.
+      this.boats.place(x, SEA_LEVEL + BOAT_FLOAT_OFFSET, z);
       return;
     }
   }
