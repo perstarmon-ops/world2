@@ -187,7 +187,10 @@ export class ChunkMesher {
             const nz = z + face.dir[2];
             const neighbor = this.world.getBlock(nx, ny, nz);
             if (neighbor === block) continue;
-            if (neighbor !== BlockType.AIR && !BLOCKS[neighbor].transparent) continue;
+            // hideMesh blocks (e.g. Bed) draw nothing of their own, so a neighboring face
+            // touching one must still be drawn - otherwise it'd be culled as "covered" by
+            // geometry that's never actually rendered, leaving a visible hole.
+            if (neighbor !== BlockType.AIR && !BLOCKS[neighbor].transparent && !BLOCKS[neighbor].hideMesh) continue;
 
             const key2 = materialKeyFor(block, face.dir);
             let buf = buffers.get(key2);
