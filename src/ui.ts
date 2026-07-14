@@ -212,7 +212,7 @@ export class UI {
     this.instructions = document.createElement("div");
     this.instructions.className = "vc-instructions";
     this.instructions.innerHTML = `
-      <h1>VoxelCraft</h1>
+      <h1>Mine And Craft Game</h1>
       <p>Click to play</p>
       <ul>
         <li><b>WASD</b> move &nbsp; <b>Space</b> jump &nbsp; <b>Shift</b> sprint/dive</li>
@@ -237,7 +237,7 @@ export class UI {
     this.modeSelect = document.createElement("div");
     this.modeSelect.className = "vc-mode-select";
     this.modeSelect.innerHTML = `
-      <h1>VoxelCraft</h1>
+      <h1>Mine And Craft Game</h1>
       <p>Choose a game mode</p>
       <div class="vc-mode-buttons">
         ${
