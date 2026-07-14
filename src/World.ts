@@ -19,6 +19,8 @@ const CAVE_MIN_Y = 3;
 const CAVE_SURFACE_BUFFER = 5;
 /** Caves (and their loot chests/easter eggs) only carve under columns at least this tall - i.e. only in the mountains, not under every hill. */
 const CAVE_MOUNTAIN_MIN_HEIGHT = 29;
+/** Fraction of mountain columns where the surface buffer is skipped, letting the cave noise breach the surface into a visible entrance. */
+const CAVE_ENTRANCE_CHANCE = 0.06;
 const CAVE_SCALE_XZ = 0.09;
 const CAVE_SCALE_Y = 0.12;
 /** Higher = thinner, sparser tunnels; sampled against abs(noise), which is 0 most often, so this stays fairly high. */
@@ -174,6 +176,7 @@ export class World {
     const caveNoise3D = createNoise3D(mulberry32(this.seed + 7));
     const lootRand = mulberry32(this.seed + 8);
     const poopRand = mulberry32(this.seed + 9);
+    const entranceRand = mulberry32(this.seed + 10);
 
     for (let x = 0; x < this.sizeX; x++) {
       for (let z = 0; z < this.sizeZ; z++) {
@@ -182,6 +185,8 @@ export class World {
         const h = Math.floor(SEA_LEVEL + TERRAIN_HEIGHT_BIAS + base * 14 + detail * 4);
         const height = Math.max(3, Math.min(this.height - 6, h));
         this.heightmap[z * this.sizeX + x] = height;
+        // A handful of mountain columns skip the surface buffer entirely, so the cave tunnel underneath breaches through as a visible entrance.
+        const isCaveEntranceColumn = height >= CAVE_MOUNTAIN_MIN_HEIGHT && entranceRand() < CAVE_ENTRANCE_CHANCE;
 
         for (let y = 0; y < this.height; y++) {
           let type = BlockType.AIR;
@@ -203,8 +208,12 @@ export class World {
           if (
             height >= CAVE_MOUNTAIN_MIN_HEIGHT &&
             y >= CAVE_MIN_Y &&
-            y < height - CAVE_SURFACE_BUFFER &&
-            (type === BlockType.STONE || type === BlockType.DIAMOND_ORE || type === BlockType.GOLD_ORE || type === BlockType.DIRT) &&
+            y < height - (isCaveEntranceColumn ? 0 : CAVE_SURFACE_BUFFER) &&
+            (type === BlockType.STONE ||
+              type === BlockType.DIAMOND_ORE ||
+              type === BlockType.GOLD_ORE ||
+              type === BlockType.DIRT ||
+              type === BlockType.GRASS) &&
             Math.abs(caveNoise3D(x * CAVE_SCALE_XZ, y * CAVE_SCALE_Y, z * CAVE_SCALE_XZ)) > CAVE_THRESHOLD
           ) {
             type = BlockType.AIR;
