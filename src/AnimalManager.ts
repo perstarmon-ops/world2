@@ -17,6 +17,8 @@ const PUSH_RADIUS = 0.9;
 const MOB_CONTACT_DAMAGE = 2;
 /** Minimum time between contact-damage hits, shared across all pushy mobs touching the player. */
 const MOB_HIT_INTERVAL = 1;
+/** How much health a single sword swing takes off. */
+const SWORD_DAMAGE = 1;
 
 export interface MobSpawnConfig {
   kind: MobKind;
@@ -134,7 +136,7 @@ export class AnimalManager {
     }
   }
 
-  /** Kills the nearest mob along the ray within reach, if any; returns its kind, or null if nothing was hit. */
+  /** Damages the nearest mob along the ray within reach, if any; returns its kind only once that hit brings it to 0 HP (and removes it), otherwise null. */
   tryAttack(origin: THREE.Vector3, direction: THREE.Vector3, maxDistance: number): MobKind | null {
     let closestIndex = -1;
     let closestDistance = Infinity;
@@ -154,7 +156,9 @@ export class AnimalManager {
     });
 
     if (closestIndex === -1) return null;
-    const [mob] = this.mobs.splice(closestIndex, 1);
+    const mob = this.mobs[closestIndex];
+    if (!mob.takeDamage(SWORD_DAMAGE)) return null;
+    this.mobs.splice(closestIndex, 1);
     this.scene.remove(mob.group);
     return mob.kind;
   }

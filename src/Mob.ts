@@ -12,6 +12,40 @@ const ZOMBIE_CHASE_SPEED = 2.2;
 /** Passive-mob ground checks require dry land above SEA_LEVEL; the nether has no sea level to speak of. */
 const NETHER_KINDS: MobKind[] = ["piglin", "hoglin"];
 
+/** Hits to kill with a sword. Chickens are fragile; the nether mobs are a bit tougher. */
+const MOB_MAX_HEALTH: Record<MobKind, number> = {
+  pig: 3,
+  cow: 3,
+  sheep: 3,
+  goat: 3,
+  chicken: 2,
+  zombie: 4,
+  piglin: 4,
+  hoglin: 4,
+};
+
+const HEALTH_BAR_WIDTH = 64;
+const HEALTH_BAR_HEIGHT = 10;
+/** World-space size of the floating health bar above a mob's head. */
+const HEALTH_BAR_SCALE: [number, number] = [0.7, 0.11];
+/** Gap above the mob's own bounding-box top before the bar sits. */
+const HEALTH_BAR_MARGIN = 0.15;
+
+function paintHealthBar(fraction: number): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = HEALTH_BAR_WIDTH;
+  canvas.height = HEALTH_BAR_HEIGHT;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, 0, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT);
+  ctx.fillStyle = "#e0303f";
+  ctx.fillRect(1, 1, Math.max(0, (HEALTH_BAR_WIDTH - 2) * fraction), HEALTH_BAR_HEIGHT - 2);
+  ctx.strokeStyle = "rgba(255,255,255,0.8)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, HEALTH_BAR_WIDTH - 1, HEALTH_BAR_HEIGHT - 1);
+  return canvas;
+}
+
 function buildPig(): { group: THREE.Group; legs: THREE.Mesh[] } {
   const group = new THREE.Group();
   const bodyMat = new THREE.MeshLambertMaterial({ color: 0xefa8b8 });
@@ -337,11 +371,16 @@ function buildModel(kind: MobKind): { group: THREE.Group; legs: THREE.Mesh[] } {
 export class Mob {
   readonly group: THREE.Group;
   readonly position: THREE.Vector3;
+  readonly maxHealth: number;
+  health: number;
   private readonly legs: THREE.Mesh[];
   private yaw = 0;
   private walking = false;
   private stateTimer = 0;
   private walkTime = 0;
+  private healthBarSprite: THREE.Sprite | null = null;
+  private healthBarTexture: THREE.CanvasTexture | null = null;
+  private readonly healthBarHeight: number;
 
   constructor(readonly kind: MobKind, spawnX: number, spawnZ: number, spawnY: number) {
     const built = buildModel(kind);
@@ -349,7 +388,36 @@ export class Mob {
     this.legs = built.legs;
     this.position = new THREE.Vector3(spawnX, spawnY, spawnZ);
     this.group.position.copy(this.position);
+    this.maxHealth = MOB_MAX_HEALTH[kind];
+    this.health = this.maxHealth;
+    this.healthBarHeight = new THREE.Box3().setFromObject(this.group).max.y + HEALTH_BAR_MARGIN;
     this.pickNewState();
+  }
+
+  /** Applies damage and updates the floating health bar (shown only once damaged); returns true if this brought the mob to 0 HP. */
+  takeDamage(amount: number): boolean {
+    this.health = Math.max(0, this.health - amount);
+    this.syncHealthBar();
+    return this.health <= 0;
+  }
+
+  private syncHealthBar(): void {
+    if (this.health >= this.maxHealth) {
+      if (this.healthBarSprite) this.healthBarSprite.visible = false;
+      return;
+    }
+    if (!this.healthBarSprite || !this.healthBarTexture) {
+      this.healthBarTexture = new THREE.CanvasTexture(paintHealthBar(1));
+      const material = new THREE.SpriteMaterial({ map: this.healthBarTexture, depthTest: false, depthWrite: false });
+      this.healthBarSprite = new THREE.Sprite(material);
+      this.healthBarSprite.scale.set(HEALTH_BAR_SCALE[0], HEALTH_BAR_SCALE[1], 1);
+      this.healthBarSprite.renderOrder = 999;
+      this.healthBarSprite.position.set(0, this.healthBarHeight, 0);
+      this.group.add(this.healthBarSprite);
+    }
+    this.healthBarSprite.visible = true;
+    this.healthBarTexture.image = paintHealthBar(this.health / this.maxHealth);
+    this.healthBarTexture.needsUpdate = true;
   }
 
   private pickNewState(): void {
