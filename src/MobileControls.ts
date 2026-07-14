@@ -9,9 +9,17 @@ const STICK_DEADZONE = 0.25;
 const LOOK_SENSITIVITY = 0.0035;
 const PI_2 = Math.PI / 2;
 
-/** True on devices that primarily use touch, where the on-screen controls should be shown instead of relying on keyboard/mouse. */
+/**
+ * True when the device's PRIMARY input is touch, where the on-screen
+ * controls should be shown instead of relying on keyboard/mouse. Checks
+ * the "pointer" media feature rather than mere touch support
+ * (navigator.maxTouchPoints/"ontouchstart") - plenty of touchscreen
+ * laptops/desktops report touch capability while still being driven by a
+ * mouse day to day, and those should keep the full 9-slot hotbar and no
+ * mobile buttons.
+ */
 export function isTouchDevice(): boolean {
-  return "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  return window.matchMedia("(pointer: coarse)").matches;
 }
 
 /**
