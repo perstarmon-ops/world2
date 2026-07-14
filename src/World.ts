@@ -17,8 +17,8 @@ const GOLD_CHANCE = 0.0025;
 const CAVE_MIN_Y = 3;
 /** Caves stay at least this many blocks below the surface, so they never breach it or undermine villages/portals (which are built at/above ground height). */
 const CAVE_SURFACE_BUFFER = 5;
-/** Caves (and their loot chests/easter eggs) only carve under columns at least this tall - i.e. only in the mountains, not under every hill. */
-const CAVE_MOUNTAIN_MIN_HEIGHT = 29;
+/** Caves (and their loot chests/easter eggs) only carve under columns at least this tall - covers regular tree-covered hills and up, just not the low beach fringe. */
+const CAVE_MIN_SURFACE_HEIGHT = SEA_LEVEL + 3;
 /** Fraction of mountain columns where the surface buffer is skipped, letting the cave noise breach the surface into a visible entrance. */
 const CAVE_ENTRANCE_CHANCE = 0.06;
 const CAVE_SCALE_XZ = 0.09;
@@ -185,8 +185,8 @@ export class World {
         const h = Math.floor(SEA_LEVEL + TERRAIN_HEIGHT_BIAS + base * 14 + detail * 4);
         const height = Math.max(3, Math.min(this.height - 6, h));
         this.heightmap[z * this.sizeX + x] = height;
-        // A handful of mountain columns skip the surface buffer entirely, so the cave tunnel underneath breaches through as a visible entrance.
-        const isCaveEntranceColumn = height >= CAVE_MOUNTAIN_MIN_HEIGHT && entranceRand() < CAVE_ENTRANCE_CHANCE;
+        // A handful of cave-eligible columns skip the surface buffer entirely, so the tunnel underneath breaches through as a visible entrance.
+        const isCaveEntranceColumn = height >= CAVE_MIN_SURFACE_HEIGHT && entranceRand() < CAVE_ENTRANCE_CHANCE;
 
         for (let y = 0; y < this.height; y++) {
           let type = BlockType.AIR;
@@ -206,7 +206,7 @@ export class World {
             type = BlockType.WATER;
           }
           if (
-            height >= CAVE_MOUNTAIN_MIN_HEIGHT &&
+            height >= CAVE_MIN_SURFACE_HEIGHT &&
             y >= CAVE_MIN_Y &&
             y < height - (isCaveEntranceColumn ? 0 : CAVE_SURFACE_BUFFER) &&
             (type === BlockType.STONE ||
@@ -264,7 +264,7 @@ export class World {
         const x = cx + Math.floor(lootRand() * LOOT_CHEST_SPACING);
         const z = cz + Math.floor(lootRand() * LOOT_CHEST_SPACING);
         if (!this.inBounds(x, 0, z)) continue;
-        const spot = this.findCaveFloorSpot(x, z);
+        const spot = this.findNearbyCaveFloorSpot(x, z, LOOT_CHEST_SPACING / 2, lootRand);
         if (!spot) continue;
         const [chestX, chestY, chestZ] = spot;
         this.setBlock(chestX, chestY, chestZ, BlockType.CHEST);
@@ -279,11 +279,18 @@ export class World {
         const x = cx + Math.floor(poopRand() * POOP_SPACING);
         const z = cz + Math.floor(poopRand() * POOP_SPACING);
         if (!this.inBounds(x, 0, z)) continue;
-        const spot = this.findCaveFloorSpot(x, z);
+        const spot = this.findNearbyCaveFloorSpot(x, z, POOP_SPACING / 2, poopRand);
         if (!spot) continue;
         const [px, py, pz] = spot;
         if (this.getBlock(px, py, pz) !== BlockType.AIR) continue; // don't overwrite a loot chest that claimed this spot
         this.setBlock(px, py, pz, BlockType.POOP);
+        // A bonus loot chest right by the jackpot, so stumbling onto this easter egg is rewarding start to finish.
+        const chestSpot = this.findNearbyCaveFloorSpot(px, pz, 6, poopRand);
+        if (chestSpot && !(chestSpot[0] === px && chestSpot[1] === py && chestSpot[2] === pz)) {
+          const [ccx, ccy, ccz] = chestSpot;
+          this.setBlock(ccx, ccy, ccz, BlockType.CHEST);
+          this.lootChests.push({ x: ccx, y: ccy, z: ccz, loot: this.rollLoot(poopRand) });
+        }
       }
     }
 
@@ -531,6 +538,24 @@ export class World {
       if (surface !== BlockType.GRASS && surface !== BlockType.DIRT && surface !== BlockType.SAND) continue;
       this.setBlock(x, y - 1, z, BlockType.PATH);
     }
+  }
+
+  /**
+   * Like findCaveFloorSpot, but if the exact column isn't part of a cave, tries nearby columns
+   * within `radius` too - a single sampled column often misses the actual tunnel, so this makes
+   * loot/easter eggs land inside the cave network around a candidate point far more reliably.
+   */
+  private findNearbyCaveFloorSpot(x: number, z: number, radius: number, rand: () => number, tries = 20): [number, number, number] | null {
+    const direct = this.findCaveFloorSpot(x, z);
+    if (direct) return direct;
+    for (let i = 0; i < tries; i++) {
+      const nx = x + Math.floor((rand() * 2 - 1) * radius);
+      const nz = z + Math.floor((rand() * 2 - 1) * radius);
+      if (!this.inBounds(nx, 0, nz)) continue;
+      const spot = this.findCaveFloorSpot(nx, nz);
+      if (spot) return spot;
+    }
+    return null;
   }
 
   /** Searches down the column at (x, z) for an air cell with a solid floor and headroom, within the same depth band caves are carved in. */
