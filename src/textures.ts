@@ -150,6 +150,7 @@ export function buildMaterials(): Map<MaterialKey, THREE.MeshLambertMaterial> {
   makeMat(BlockType.FURNACE, paintFurnace(), false);
   makeMat(BlockType.COOKED_MEAT, paintTexture(BLOCKS[BlockType.COOKED_MEAT].color, 31, { grain: 22 }), false);
   makeMat(BlockType.CHEST, paintChest(), false);
+  makeMat(BlockType.POOP, paintPoop(), false);
 
   return materials;
 }
@@ -167,6 +168,30 @@ function paintChest(): HTMLCanvasElement {
   ctx.stroke();
   ctx.fillStyle = "rgb(214, 190, 90)";
   ctx.fillRect(7, 6, 2, 3);
+  return canvas;
+}
+
+/** A goofy cartoon poop with swirl coils and eyes - it's an easter egg, it's allowed to be silly. */
+function paintPoop(): HTMLCanvasElement {
+  const canvas = paintTexture(BLOCKS[BlockType.POOP].color, 34, { grain: 14 });
+  const ctx = canvas.getContext("2d")!;
+  ctx.strokeStyle = "rgba(50, 32, 14, 0.7)";
+  ctx.lineWidth = 1;
+  for (const [cy, r] of [
+    [13, 5],
+    [9, 3.5],
+    [5.5, 2],
+  ] as [number, number][]) {
+    ctx.beginPath();
+    ctx.arc(8, cy, r, Math.PI, 0);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(5, 9, 2, 2);
+  ctx.fillRect(9, 9, 2, 2);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(5, 9, 1, 1);
+  ctx.fillRect(10, 9, 1, 1);
   return canvas;
 }
 

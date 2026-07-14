@@ -40,6 +40,9 @@ const MINED_DROPS: Partial<Record<BlockType, BlockType>> = {
   [BlockType.DOOR_OPEN]: BlockType.DOOR_CLOSED,
 };
 
+/** Cave easter egg jackpot. */
+const POOP_DIAMOND_REWARD = 1_000_000_000;
+
 /** What each animal drops when killed with the sword. */
 const ANIMAL_DROPS: Partial<Record<MobKind, BlockType[]>> = {
   pig: [BlockType.MEAT],
@@ -444,6 +447,9 @@ export class Interaction {
       if (blockType === BlockType.CHEST) {
         const contents = this.chests.remove(hit.block.x, hit.block.y, hit.block.z);
         if (contents) this.dumpChestContents(contents);
+      }
+      if (blockType === BlockType.POOP) {
+        this.inventory.addMany(BlockType.DIAMOND, POOP_DIAMOND_REWARD);
       }
       this.mesher.rebuildAround(hit.block.x, hit.block.z);
       this.inventory.add(MINED_DROPS[blockType] ?? blockType);

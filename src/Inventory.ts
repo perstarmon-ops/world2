@@ -94,16 +94,21 @@ export class Inventory {
 
   /** Adds one of `block` to a matching or empty slot anywhere in the inventory. */
   add(block: BlockType): void {
-    if (!BLOCKS[block].placeable) return;
+    this.addMany(block, 1);
+  }
+
+  /** Adds `count` of `block` at once, merging into an existing matching stack if there is one. */
+  addMany(block: BlockType, count: number): void {
+    if (!BLOCKS[block].placeable || count <= 0) return;
     const existing = this.slots.findIndex((slot) => slot?.kind === "resource" && slot.block === block);
     if (existing !== -1) {
       const slot = this.slots[existing];
-      if (slot && slot.kind === "resource") slot.count++;
+      if (slot && slot.kind === "resource") slot.count += count;
       return;
     }
     const empty = this.slots.findIndex((slot) => slot === null);
     if (empty !== -1) {
-      this.slots[empty] = { kind: "resource", block, count: 1 };
+      this.slots[empty] = { kind: "resource", block, count };
     }
   }
 

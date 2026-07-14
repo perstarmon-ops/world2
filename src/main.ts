@@ -90,6 +90,15 @@ const inventory = new Inventory();
 const boatManager = new BoatManager(scene);
 const bedManager = new BedManager(scene);
 const chestManager = new ChestManager();
+// Pre-fill cave loot chests placed during world generation; if a saved game is
+// loaded, the Continue flow's chestManager.loadSnapshot() below replaces this
+// with whatever the player actually left in them.
+for (const loot of overworld.getLootChests()) {
+  const slots = chestManager.getOrCreate(loot.x, loot.y, loot.z);
+  loot.loot.forEach(([block, count], i) => {
+    slots[i] = { kind: "resource", block, count };
+  });
+}
 const fallingSandManager = new FallingSandManager(scene);
 const doorManager = new DoorManager(scene);
 

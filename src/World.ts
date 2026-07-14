@@ -1,4 +1,4 @@
-import { createNoise2D } from "simplex-noise";
+import { createNoise2D, createNoise3D } from "simplex-noise";
 import { BlockType, BLOCKS } from "./blocks";
 
 export const CHUNK_SIZE = 16;
@@ -14,6 +14,19 @@ const DIAMOND_MAX_Y = 14;
 const DIAMOND_CHANCE = 0.0015;
 const GOLD_MAX_Y = 22;
 const GOLD_CHANCE = 0.0025;
+const CAVE_MIN_Y = 3;
+/** Caves stay at least this many blocks below the surface, so they never breach it or undermine villages/portals (which are built at/above ground height). */
+const CAVE_SURFACE_BUFFER = 5;
+const CAVE_SCALE_XZ = 0.09;
+const CAVE_SCALE_Y = 0.12;
+/** Higher = thinner, sparser tunnels; sampled against abs(noise), which is 0 most often, so this stays fairly high. */
+const CAVE_THRESHOLD = 0.62;
+/** One candidate roughly every this many blocks in each axis when scattering loot chests. */
+const LOOT_CHEST_SPACING = 20;
+const LOOT_CHEST_CHANCE = 0.5;
+/** An ultra-rare cave easter egg - much sparser than loot chests, expect roughly one or two per map. */
+const POOP_SPACING = 40;
+const POOP_CHANCE = 0.15;
 
 function mulberry32(seed: number): () => number {
   let a = seed;
@@ -48,6 +61,7 @@ export class World {
   private readonly seed: number;
   private readonly theme: WorldTheme;
   private portalPosition: [number, number, number] | null = null;
+  private readonly lootChests: { x: number; y: number; z: number; loot: [BlockType, number][] }[] = [];
 
   constructor(seed = 1337, theme: WorldTheme = "overworld") {
     this.seed = seed;
@@ -60,6 +74,11 @@ export class World {
   /** World-space coordinates of the standing tile inside this world's portal, if one was built. */
   getPortalPosition(): [number, number, number] | null {
     return this.portalPosition;
+  }
+
+  /** Cave-floor chests placed during generation, with their pre-rolled loot - the caller populates a ChestManager from this after construction. */
+  getLootChests(): ReadonlyArray<{ x: number; y: number; z: number; loot: [BlockType, number][] }> {
+    return this.lootChests;
   }
 
   private index(x: number, y: number, z: number): number {
@@ -150,6 +169,9 @@ export class World {
     const oreRand = mulberry32(this.seed + 3);
     const flowerRand = mulberry32(this.seed + 4);
     const villageRand = mulberry32(this.seed + 5);
+    const caveNoise3D = createNoise3D(mulberry32(this.seed + 7));
+    const lootRand = mulberry32(this.seed + 8);
+    const poopRand = mulberry32(this.seed + 9);
 
     for (let x = 0; x < this.sizeX; x++) {
       for (let z = 0; z < this.sizeZ; z++) {
@@ -175,6 +197,14 @@ export class World {
             type = height <= SEA_LEVEL + 1 ? BlockType.SAND : BlockType.GRASS;
           } else if (y < SEA_LEVEL) {
             type = BlockType.WATER;
+          }
+          if (
+            y >= CAVE_MIN_Y &&
+            y < height - CAVE_SURFACE_BUFFER &&
+            (type === BlockType.STONE || type === BlockType.DIAMOND_ORE || type === BlockType.GOLD_ORE || type === BlockType.DIRT) &&
+            Math.abs(caveNoise3D(x * CAVE_SCALE_XZ, y * CAVE_SCALE_Y, z * CAVE_SCALE_XZ)) > CAVE_THRESHOLD
+          ) {
+            type = BlockType.AIR;
           }
           if (type !== BlockType.AIR) {
             this.blocks[this.index(x, y, z)] = type;
@@ -212,6 +242,36 @@ export class World {
         if (this.getBlock(x, height, z) !== BlockType.AIR) continue;
         const type = flowerRand() < 0.5 ? BlockType.FLOWER_RED : BlockType.FLOWER_YELLOW;
         this.setBlock(x, height, z, type);
+      }
+    }
+
+    // Scatter loot chests on cave floors, one candidate per LOOT_CHEST_SPACING cell.
+    for (let cx = 2; cx < this.sizeX - 2; cx += LOOT_CHEST_SPACING) {
+      for (let cz = 2; cz < this.sizeZ - 2; cz += LOOT_CHEST_SPACING) {
+        if (lootRand() > LOOT_CHEST_CHANCE) continue;
+        const x = cx + Math.floor(lootRand() * LOOT_CHEST_SPACING);
+        const z = cz + Math.floor(lootRand() * LOOT_CHEST_SPACING);
+        if (!this.inBounds(x, 0, z)) continue;
+        const spot = this.findCaveFloorSpot(x, z);
+        if (!spot) continue;
+        const [chestX, chestY, chestZ] = spot;
+        this.setBlock(chestX, chestY, chestZ, BlockType.CHEST);
+        this.lootChests.push({ x: chestX, y: chestY, z: chestZ, loot: this.rollLoot(lootRand) });
+      }
+    }
+
+    // An ultra-rare easter egg on a cave floor somewhere.
+    for (let cx = 3; cx < this.sizeX - 3; cx += POOP_SPACING) {
+      for (let cz = 3; cz < this.sizeZ - 3; cz += POOP_SPACING) {
+        if (poopRand() > POOP_CHANCE) continue;
+        const x = cx + Math.floor(poopRand() * POOP_SPACING);
+        const z = cz + Math.floor(poopRand() * POOP_SPACING);
+        if (!this.inBounds(x, 0, z)) continue;
+        const spot = this.findCaveFloorSpot(x, z);
+        if (!spot) continue;
+        const [px, py, pz] = spot;
+        if (this.getBlock(px, py, pz) !== BlockType.AIR) continue; // don't overwrite a loot chest that claimed this spot
+        this.setBlock(px, py, pz, BlockType.POOP);
       }
     }
 
@@ -459,6 +519,42 @@ export class World {
       if (surface !== BlockType.GRASS && surface !== BlockType.DIRT && surface !== BlockType.SAND) continue;
       this.setBlock(x, y - 1, z, BlockType.PATH);
     }
+  }
+
+  /** Searches down the column at (x, z) for an air cell with a solid floor and headroom, within the same depth band caves are carved in. */
+  private findCaveFloorSpot(x: number, z: number): [number, number, number] | null {
+    const height = this.heightAt(x, z);
+    const top = Math.min(this.height - 1, height - CAVE_SURFACE_BUFFER - 1);
+    for (let y = top; y >= CAVE_MIN_Y; y--) {
+      if (this.getBlock(x, y, z) !== BlockType.AIR) continue;
+      if (this.getBlock(x, y + 1, z) !== BlockType.AIR) continue;
+      if (!this.isSolid(x, y - 1, z)) continue;
+      return [x, y, z];
+    }
+    return null;
+  }
+
+  /** A handful of randomized resource stacks for a cave loot chest. */
+  private rollLoot(rand: () => number): [BlockType, number][] {
+    const pool: [BlockType, number, number][] = [
+      [BlockType.DIAMOND, 1, 3],
+      [BlockType.GOLD, 1, 4],
+      [BlockType.COBBLESTONE, 4, 12],
+      [BlockType.MEAT, 2, 5],
+      [BlockType.WOOL, 2, 6],
+      [BlockType.PLANK, 4, 10],
+    ];
+    const itemCount = Math.min(pool.length, 2 + Math.floor(rand() * 3));
+    const usedIndices = new Set<number>();
+    const loot: [BlockType, number][] = [];
+    while (loot.length < itemCount) {
+      const idx = Math.floor(rand() * pool.length);
+      if (usedIndices.has(idx)) continue;
+      usedIndices.add(idx);
+      const [block, min, max] = pool[idx];
+      loot.push([block, min + Math.floor(rand() * (max - min + 1))]);
+    }
+    return loot;
   }
 
   private plantTree(x: number, y: number, z: number, rand: () => number): void {

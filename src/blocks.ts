@@ -36,6 +36,7 @@ export enum BlockType {
   FURNACE = 34,
   COOKED_MEAT = 35,
   CHEST = 36,
+  POOP = 37,
 }
 
 export interface BlockInfo {
@@ -97,4 +98,6 @@ export const BLOCKS: Record<BlockType, BlockInfo> = {
   [BlockType.FURNACE]: { name: "Furnace", color: [96, 96, 92], solid: true, transparent: false, placeable: true, breakable: true, hardness: 1.4 },
   [BlockType.COOKED_MEAT]: { name: "Cooked Meat", color: [122, 66, 46], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.3 },
   [BlockType.CHEST]: { name: "Chest", color: [130, 90, 48], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.7 },
+  // An ultra-rare cave easter egg - see Interaction.ts's mining-completion special case for the reward.
+  [BlockType.POOP]: { name: "💩 Poop", color: [90, 60, 28], solid: true, transparent: false, placeable: true, breakable: true, hardness: 0.1 },
 };
