@@ -11,10 +11,15 @@ function sameLocation(a: SlotLocation | null, b: SlotLocation): boolean {
   return a !== null && a.source === b.source && a.index === b.index;
 }
 
+// The shovel emoji (U+1FA8F, added in 2023) isn't rendered by most systems' emoji
+// fonts yet, showing as a blank/tofu box - draw it as inline SVG instead, which
+// renders identically everywhere regardless of font/emoji support.
+const SHOVEL_ICON_SVG = `<svg viewBox="0 0 24 24" width="20" height="20"><line x1="17" y1="4" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="3" r="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4 16 L8 12 L12 16 L8 20 Z" fill="currentColor"/></svg>`;
+
 const TOOL_ICONS: Record<Tool, string> = {
   pickaxe: "⛏",
   axe: "🪓",
-  shovel: "♠",
+  shovel: SHOVEL_ICON_SVG,
   sword: "🗡",
 };
 
@@ -469,7 +474,7 @@ export class UI {
 
     if (slot?.kind === "tool") {
       el.classList.remove("vc-slot-empty");
-      icon.textContent = TOOL_ICONS[slot.tool];
+      icon.innerHTML = TOOL_ICONS[slot.tool];
       swatch.style.backgroundImage = "";
       count.textContent = "";
       el.title = slot.tool.charAt(0).toUpperCase() + slot.tool.slice(1);
