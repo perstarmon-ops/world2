@@ -398,7 +398,9 @@ export class Mob {
       if (this.isWalkable(world, nx, nz)) {
         this.position.x = nx;
         this.position.z = nz;
-        this.position.y = world.surfaceHeightAt(Math.floor(nx), Math.floor(nz));
+        // heightAt() (the precomputed ground-only heightmap), not surfaceHeightAt() (which
+        // scans live blocks and would land a mob on top of a tree's leaves - solid, but not ground).
+        this.position.y = world.heightAt(Math.floor(nx), Math.floor(nz));
         this.walkTime += dt;
       } else if (!chasing) {
         this.stateTimer = 0;

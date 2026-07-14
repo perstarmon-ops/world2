@@ -65,7 +65,9 @@ export class AnimalManager {
       const spot = this.findSpawnSpot();
       if (!spot) continue;
       const [x, z] = spot;
-      const y = this.world.surfaceHeightAt(x, z);
+      // heightAt() matches findSpawnSpot()'s own ground check - surfaceHeightAt() scans live
+      // blocks and would spawn a mob on top of a tree's leaves if one happens to stand here.
+      const y = this.world.heightAt(x, z);
       const mob = new Mob(kind, x + 0.5, z + 0.5, y);
       this.scene.add(mob.group);
       this.mobs.push(mob);
