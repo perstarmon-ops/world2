@@ -17,6 +17,8 @@ const GOLD_CHANCE = 0.0025;
 const CAVE_MIN_Y = 3;
 /** Caves stay at least this many blocks below the surface, so they never breach it or undermine villages/portals (which are built at/above ground height). */
 const CAVE_SURFACE_BUFFER = 5;
+/** Caves (and their loot chests/easter eggs) only carve under columns at least this tall - i.e. only in the mountains, not under every hill. */
+const CAVE_MOUNTAIN_MIN_HEIGHT = 29;
 const CAVE_SCALE_XZ = 0.09;
 const CAVE_SCALE_Y = 0.12;
 /** Higher = thinner, sparser tunnels; sampled against abs(noise), which is 0 most often, so this stays fairly high. */
@@ -199,6 +201,7 @@ export class World {
             type = BlockType.WATER;
           }
           if (
+            height >= CAVE_MOUNTAIN_MIN_HEIGHT &&
             y >= CAVE_MIN_Y &&
             y < height - CAVE_SURFACE_BUFFER &&
             (type === BlockType.STONE || type === BlockType.DIAMOND_ORE || type === BlockType.GOLD_ORE || type === BlockType.DIRT) &&
