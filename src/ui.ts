@@ -300,6 +300,17 @@ export class UI {
       }
     });
 
+    // Scrolling cycles the selected hotbar slot, like Minecraft - skipped while the inventory screen (which has its own scrolling) is open.
+    window.addEventListener(
+      "wheel",
+      (e) => {
+        if (this.inventoryOpen) return;
+        const dir = e.deltaY > 0 ? 1 : -1;
+        this.inventory.select((this.inventory.getSelectedIndex() + dir + HOTBAR_SLOT_COUNT) % HOTBAR_SLOT_COUNT);
+      },
+      { passive: true },
+    );
+
     this.refreshInventory();
   }
 
