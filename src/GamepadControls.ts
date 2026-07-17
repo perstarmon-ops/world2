@@ -11,10 +11,14 @@ const STICK_DEADZONE = 0.25;
  * Gamepad API has no change events of its own.
  */
 export class GamepadControls {
+  /** Raw status of whatever the browser currently reports, for the on-screen debug overlay - lets someone with no keyboard/DevTools access (e.g. controller-only) see whether a gamepad was even detected. */
+  private lastStatus = "Gamepad: none detected";
+
   constructor(private readonly player: Player) {}
 
   update(): void {
-    const pad = navigator.getGamepads?.().find((g) => g !== null) ?? null;
+    const pads = navigator.getGamepads?.() ?? [];
+    const pad = Array.from(pads).find((g) => g !== null) ?? null;
     // No pad (or it just disconnected mid-press) - make sure a stuck direction doesn't keep the player walking forever.
     const nx = pad ? (pad.axes[0] ?? 0) : 0;
     const ny = pad ? (pad.axes[1] ?? 0) : 0;
@@ -25,5 +29,13 @@ export class GamepadControls {
     this.player.setVirtualKey("GamepadBack", ny > STICK_DEADZONE);
     this.player.setVirtualKey("GamepadLeft", nx < -STICK_DEADZONE);
     this.player.setVirtualKey("GamepadRight", nx > STICK_DEADZONE);
+
+    this.lastStatus = pad
+      ? `Gamepad: ${pad.id} | axes=[${pad.axes.map((a) => a.toFixed(2)).join(", ")}]`
+      : "Gamepad: none detected";
+  }
+
+  getDebugStatus(): string {
+    return this.lastStatus;
   }
 }

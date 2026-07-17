@@ -335,7 +335,7 @@ function animate(): void {
     const p = player.getEyePosition();
     const fps = dt > 0 ? Math.round(1 / dt) : 0;
     ui.setDebugText(
-      `Mine And Craft Game\nFPS ~${fps}\nX ${p.x.toFixed(1)}  Y ${p.y.toFixed(1)}  Z ${p.z.toFixed(1)}\nMusic ${musicMuted ? "off" : "on"} (M)`,
+      `Mine And Craft Game\nFPS ~${fps}\nX ${p.x.toFixed(1)}  Y ${p.y.toFixed(1)}  Z ${p.z.toFixed(1)}\nMusic ${musicMuted ? "off" : "on"} (M)\n${gamepadControls.getDebugStatus()}`,
     );
     ui.setClock(dayNight.getClockText());
   }

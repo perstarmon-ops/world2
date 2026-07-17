@@ -98,6 +98,8 @@ export class Player {
     this.syncCamera();
 
     window.addEventListener("keydown", (e) => {
+      // Arrow keys double as movement (e.g. a Steam Controller's D-pad emulating them by default) - stop the browser's own scroll-the-page behavior for them.
+      if (e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "ArrowLeft" || e.code === "ArrowRight") e.preventDefault();
       this.keys.add(e.code);
       if (e.code === "Space" && !e.repeat && this.canFly) this.handleSpaceTap();
       // Ctrl works too in case Shift is intercepted by the OS/browser on some setups (same reasoning as the flying-descend fallback).
@@ -287,10 +289,10 @@ export class Player {
     const right = this.rightVector();
     const moveDir = new THREE.Vector3();
 
-    if (this.keys.has("KeyW") || this.keys.has("GamepadForward")) moveDir.add(forward);
-    if (this.keys.has("KeyS") || this.keys.has("GamepadBack")) moveDir.sub(forward);
-    if (this.keys.has("KeyD") || this.keys.has("GamepadRight")) moveDir.add(right);
-    if (this.keys.has("KeyA") || this.keys.has("GamepadLeft")) moveDir.sub(right);
+    if (this.keys.has("KeyW") || this.keys.has("ArrowUp") || this.keys.has("GamepadForward")) moveDir.add(forward);
+    if (this.keys.has("KeyS") || this.keys.has("ArrowDown") || this.keys.has("GamepadBack")) moveDir.sub(forward);
+    if (this.keys.has("KeyD") || this.keys.has("ArrowRight") || this.keys.has("GamepadRight")) moveDir.add(right);
+    if (this.keys.has("KeyA") || this.keys.has("ArrowLeft") || this.keys.has("GamepadLeft")) moveDir.sub(right);
 
     const sprinting = !this.flying && !inWater && (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"));
     const crouching = !this.flying && !inWater && (this.keys.has("ControlLeft") || this.keys.has("ControlRight"));
@@ -381,10 +383,10 @@ export class Player {
     const right = this.rightVector();
     const moveDir = new THREE.Vector3();
 
-    if (this.keys.has("KeyW") || this.keys.has("GamepadForward")) moveDir.add(forward);
-    if (this.keys.has("KeyS") || this.keys.has("GamepadBack")) moveDir.sub(forward);
-    if (this.keys.has("KeyD") || this.keys.has("GamepadRight")) moveDir.add(right);
-    if (this.keys.has("KeyA") || this.keys.has("GamepadLeft")) moveDir.sub(right);
+    if (this.keys.has("KeyW") || this.keys.has("ArrowUp") || this.keys.has("GamepadForward")) moveDir.add(forward);
+    if (this.keys.has("KeyS") || this.keys.has("ArrowDown") || this.keys.has("GamepadBack")) moveDir.sub(forward);
+    if (this.keys.has("KeyD") || this.keys.has("ArrowRight") || this.keys.has("GamepadRight")) moveDir.add(right);
+    if (this.keys.has("KeyA") || this.keys.has("ArrowLeft") || this.keys.has("GamepadLeft")) moveDir.sub(right);
 
     if (moveDir.lengthSq() > 0) {
       moveDir.normalize().multiplyScalar(BOAT_SPEED * dt);
