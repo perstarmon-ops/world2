@@ -287,10 +287,10 @@ export class Player {
     const right = this.rightVector();
     const moveDir = new THREE.Vector3();
 
-    if (this.keys.has("KeyW")) moveDir.add(forward);
-    if (this.keys.has("KeyS")) moveDir.sub(forward);
-    if (this.keys.has("KeyD")) moveDir.add(right);
-    if (this.keys.has("KeyA")) moveDir.sub(right);
+    if (this.keys.has("KeyW") || this.keys.has("GamepadForward")) moveDir.add(forward);
+    if (this.keys.has("KeyS") || this.keys.has("GamepadBack")) moveDir.sub(forward);
+    if (this.keys.has("KeyD") || this.keys.has("GamepadRight")) moveDir.add(right);
+    if (this.keys.has("KeyA") || this.keys.has("GamepadLeft")) moveDir.sub(right);
 
     const sprinting = !this.flying && !inWater && (this.keys.has("ShiftLeft") || this.keys.has("ShiftRight"));
     const crouching = !this.flying && !inWater && (this.keys.has("ControlLeft") || this.keys.has("ControlRight"));
@@ -381,10 +381,10 @@ export class Player {
     const right = this.rightVector();
     const moveDir = new THREE.Vector3();
 
-    if (this.keys.has("KeyW")) moveDir.add(forward);
-    if (this.keys.has("KeyS")) moveDir.sub(forward);
-    if (this.keys.has("KeyD")) moveDir.add(right);
-    if (this.keys.has("KeyA")) moveDir.sub(right);
+    if (this.keys.has("KeyW") || this.keys.has("GamepadForward")) moveDir.add(forward);
+    if (this.keys.has("KeyS") || this.keys.has("GamepadBack")) moveDir.sub(forward);
+    if (this.keys.has("KeyD") || this.keys.has("GamepadRight")) moveDir.add(right);
+    if (this.keys.has("KeyA") || this.keys.has("GamepadLeft")) moveDir.sub(right);
 
     if (moveDir.lengthSq() > 0) {
       moveDir.normalize().multiplyScalar(BOAT_SPEED * dt);

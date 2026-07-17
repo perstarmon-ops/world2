@@ -8,6 +8,7 @@ import { ChunkMesher } from "./ChunkMesher";
 import { DayNightCycle } from "./DayNightCycle";
 import { DoorManager } from "./DoorManager";
 import { FallingSandManager } from "./FallingSandManager";
+import { GamepadControls } from "./GamepadControls";
 import { Interaction } from "./Interaction";
 import { Inventory } from "./Inventory";
 import { MobileControls } from "./MobileControls";
@@ -169,6 +170,7 @@ const ui = new UI(
 );
 const playerPreview = new PlayerPreview(ui.getPreviewCanvas());
 const mobileControls = new MobileControls(camera, player, interaction, ui, app);
+const gamepadControls = new GamepadControls(player);
 
 /** Swaps which dimension the player, interaction, mesher visibility, and animals target. */
 function enterDimension(next: World, nextMesher: ChunkMesher, nextAnimals: AnimalManager, goingToNether: boolean): void {
@@ -281,6 +283,7 @@ let debugAccum = 0;
 function animate(): void {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
+  gamepadControls.update();
   player.update(dt);
   mobileControls.update();
 
