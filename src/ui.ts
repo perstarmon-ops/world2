@@ -28,6 +28,8 @@ const VITAL_ICON_COUNT = 10;
 const VITAL_POINTS_PER_ICON = 2;
 /** How many hotbar slots stay visible in compact (mobile) mode - the rest are still selectable, just hidden. */
 const COMPACT_HOTBAR_SLOT_COUNT = 6;
+/** Minimum time between scroll-wheel hotbar slot changes, so one fast scroll gesture doesn't fly through several slots at once. */
+const WHEEL_SELECT_COOLDOWN_MS = 150;
 
 function buildSlotEl(key: number, onClick: () => void): HTMLDivElement {
   const el = document.createElement("div");
@@ -301,10 +303,15 @@ export class UI {
     });
 
     // Scrolling cycles the selected hotbar slot, like Minecraft - skipped while the inventory screen (which has its own scrolling) is open.
+    // Rate-limited so a single fast scroll gesture (especially a trackpad, which fires many tiny wheel events per swipe) steps one slot at a time instead of flying through the whole bar.
+    let lastWheelSelectTime = 0;
     window.addEventListener(
       "wheel",
       (e) => {
         if (this.inventoryOpen) return;
+        const now = performance.now();
+        if (now - lastWheelSelectTime < WHEEL_SELECT_COOLDOWN_MS) return;
+        lastWheelSelectTime = now;
         const dir = e.deltaY > 0 ? 1 : -1;
         this.inventory.select((this.inventory.getSelectedIndex() + dir + HOTBAR_SLOT_COUNT) % HOTBAR_SLOT_COUNT);
       },
