@@ -33,6 +33,10 @@ Godot 4.3 is required; the CI pins that version.
 | Save          | Back (or Select)                 | F5                          |
 | Save and quit | Y, while paused                  | Q, while paused             |
 
+The grips on the back of a Steam Controller are paddles, and they match the buttons
+beside them: Paddle 1 jumps, Paddle 2 sprints, Paddle 3 crouches. They are in
+`scripts/core/bindings.gd`, alongside the buttons they match.
+
 Every control is listed in `scripts/core/bindings.gd`. Change a button there and
 nothing else needs to know.
 

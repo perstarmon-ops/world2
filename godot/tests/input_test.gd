@@ -65,6 +65,11 @@ func _process(_delta: float) -> bool:
 		3:
 			_axis(JOY_AXIS_TRIGGER_RIGHT, 0.0)
 			_ok("the right trigger digs a block", _changes > _changes_before, "%d block changes" % (_changes - _changes_before))
+			_button(JOY_BUTTON_PADDLE2, true)
+			_next(5, 300)
+		5:
+			_ok("a Steam Controller grip (paddle 2) runs as sprint", Bindings.is_down("sprint"))
+			_button(JOY_BUTTON_PADDLE2, false)
 			_button(JOY_BUTTON_START, true)
 			_next(4, 400)
 		4:

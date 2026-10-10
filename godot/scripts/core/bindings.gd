@@ -7,6 +7,10 @@
 ##
 ## The pad layout is the Xbox one. Steam Input presents a Steam Controller and most
 ## other pads this way, so a Steam Machine needs no special case.
+##
+## A Steam Controller's grips are paddles, and they report above that layout. Each
+## action lists its paddles after its ordinary buttons, so a grip does the same job
+## as the button it sits beside, and a pad with no paddles simply never presses them.
 class_name Bindings
 extends RefCounted
 
@@ -16,9 +20,9 @@ const ACTIONS := ["jump", "sprint", "crouch", "mine", "place", "next_slot", "pre
 const AXIS_THRESHOLD := 0.5
 
 const CONTROLS := {
-	"jump": {"buttons": [JOY_BUTTON_A], "keys": [KEY_SPACE]},
-	"sprint": {"buttons": [JOY_BUTTON_LEFT_STICK], "keys": [KEY_SHIFT]},
-	"crouch": {"buttons": [JOY_BUTTON_B], "keys": [KEY_CTRL]},
+	"jump": {"buttons": [JOY_BUTTON_A, JOY_BUTTON_PADDLE1], "keys": [KEY_SPACE]},
+	"sprint": {"buttons": [JOY_BUTTON_LEFT_STICK, JOY_BUTTON_PADDLE2], "keys": [KEY_SHIFT]},
+	"crouch": {"buttons": [JOY_BUTTON_B, JOY_BUTTON_PADDLE3], "keys": [KEY_CTRL]},
 	"mine": {"axes": [[JOY_AXIS_TRIGGER_RIGHT, 1.0]], "mouse": [MOUSE_BUTTON_LEFT]},
 	"place": {"axes": [[JOY_AXIS_TRIGGER_LEFT, 1.0]], "mouse": [MOUSE_BUTTON_RIGHT]},
 	"next_slot": {"buttons": [JOY_BUTTON_RIGHT_SHOULDER, JOY_BUTTON_DPAD_RIGHT]},
