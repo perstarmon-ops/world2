@@ -1,0 +1,105 @@
+# The checks for the Godot port.
+#
+# Three suites, each headless, and a smoke run of the real main scene. Every one
+# fails the build for a different reason:
+#
+#   world_test.gd    the terrain is the same every time, the land can be stood on,
+#                    every feature appears, and the mesh faces the way Godot draws.
+#   physics_test.gd  a jump is 1.45 blocks, a wall stops a body, a single block is
+#                    stepped up onto.
+#   rules_test.gd    the inventory, mining, placing, the controls and the saves.
+#
+# The smoke run starts the game and lets it run for a few hundred frames, so a
+# script that only fails once the app is wired together is caught here too.
+#
+# Any engine error in a log fails the build, not only a failed assertion, because a
+# shader or a mesh that prints "Invalid" and carries on looks fine in the checks and
+# is broken on the TV.
+
+name: Godot checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: godot-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.3"
+
+jobs:
+  checks:
+    name: Import, check, and run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache the engine
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Fetch Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot-bin
+          url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSL -o /tmp/godot.zip "$url"
+          unzip -q -o /tmp/godot.zip -d ~/godot-bin
+          mv ~/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+
+      # Writes the class cache, and surfaces a parse error in any script the main
+      # scene does not happen to load.
+      - name: Import the project
+        run: ~/godot-bin/godot --headless --path godot --import 2>&1 | tee /tmp/import.log
+
+      - name: Fail on a parse error
+        run: |
+          if grep -qE "Parse Error|Compile Error|Failed to load script" /tmp/import.log; then
+            grep -E "Parse Error|Compile Error|Failed to load script" -A1 /tmp/import.log
+            exit 1
+          fi
+
+      - name: Run the suites
+        run: |
+          set -uo pipefail
+          for suite in world physics rules input; do
+            ~/godot-bin/godot --headless --path godot \
+              --script res://tests/${suite}_test.gd 2>&1 | tee /tmp/${suite}.log
+            code=${PIPESTATUS[0]}
+            if [ "$code" -ne 0 ]; then
+              echo "::error::the ${suite} suite failed (exit $code)"
+              exit 1
+            fi
+          done
+
+      - name: Run the game for a few hundred frames
+        run: |
+          set -o pipefail
+          ~/godot-bin/godot --headless --path godot --quit-after 300 2>&1 | tee /tmp/smoke.log
+
+      # The suites print "Parse JSON failed" on purpose: rules_test.gd hands the
+      # save reader a file that is not JSON, to check that a damaged save starts a
+      # new game rather than crashing. Nothing else is allowed.
+      - name: And nothing complained on the way
+        run: |
+          set -uo pipefail
+          if cat /tmp/world.log /tmp/physics.log /tmp/rules.log /tmp/input.log /tmp/smoke.log \
+              | grep -hE "^ERROR:|^SCRIPT ERROR:" \
+              | grep -v "Parse JSON failed" | sort | uniq -c | tee /tmp/noise.log \
+              | grep -q .; then
+            cat /tmp/noise.log
+            echo "::error::the engine printed errors while the checks ran"
+            exit 1
+          fi

@@ -3,3 +3,7 @@ dist
 .DS_Store
 *.local
 *.tsbuildinfo
+
+# Godot: the editor's class and import cache, and built executables
+godot/.godot/
+build/

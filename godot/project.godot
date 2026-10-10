@@ -1,0 +1,51 @@
+; MINE AND CRAFT — the Godot port of the voxel sandbox, for a Steam Machine.
+;
+; The web game is a Three.js build on a laptop. This one is a Godot 4.3 project
+; that runs on SteamOS, on the TV, with a controller in hand. Everything is drawn
+; at runtime from code and the voxel world is generated from a seed, so the
+; repository is text and the build is one self-contained executable.
+;
+; There is no input map on purpose. The controller is the primary device, and
+; Godot's ui_* actions are the wrong shape for a voxel game: they move a
+; highlight and answer to the pad as well, so one press arrives twice.
+; scripts/core/bindings.gd names what each button does instead, and
+; scripts/core/game_input.gd reads the pad, keyboard and mouse into one snapshot.
+
+config_version=5
+
+[application]
+
+config/name="Mine And Craft"
+config/description="A voxel sandbox: dig, build and explore a generated world, played with a controller on a TV."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+
+[display]
+
+; A living-room TV, so 1080p and fullscreen. The HUD is laid out in these units
+; and stretched, so a 16:10 or 4:3 screen gets extra room at the edges rather
+; than a reflowed interface.
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/mode=3
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+; The Compatibility renderer, not Forward+. Steam Machine has a GPU, but a build
+; that cannot find Vulkan does not fall back to anything; it exits. OpenGL
+; through Compatibility runs on every machine SteamOS supports, and the voxel
+; meshes here are plain lit triangles, so nothing needs more.
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+
+[physics]
+
+; The simulation runs on its own fixed step (scripts/game/player.gd), so this only
+; sets the rate _physics_process is called at. They match on purpose: at 60 Hz
+; each call is exactly one simulation step.
+common/physics_ticks_per_second=60
+; No Godot physics bodies anywhere. Collision is the voxel grid, read directly.
+2d/default_gravity=0.0
+3d/default_gravity=0.0

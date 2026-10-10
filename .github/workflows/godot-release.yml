@@ -1,0 +1,191 @@
+# Build the Steam Machine (SteamOS, Linux) executable and attach it to a release.
+#
+# There are three ways to ask for a build:
+#
+#   1. Edit godot/VERSION to a new version and push it to main.
+#   2. Push a tag:  git tag v0.2.0 && git push origin v0.2.0
+#   3. Actions -> Godot release -> Run workflow, and type the tag.
+#
+# Every push to main starts this workflow, and the `decide` job is the guard: it
+# stops unless that version has no release yet, so an ordinary commit costs seconds
+# and publishes nothing.
+#
+# The export embeds its .pck, so the download is a single executable with nothing
+# to keep beside it.
+
+name: Godot release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create the release under (e.g. v0.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.3"
+  PROJECT_DIR: godot
+
+jobs:
+  decide:
+    name: Which version, if any
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.pick.outputs.tag }}
+      go: ${{ steps.pick.outputs.go }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the tag
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          DISPATCH_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            tag="$DISPATCH_TAG"
+            source="the Run workflow button"
+          elif [ "$REF_TYPE" = "tag" ]; then
+            tag="$REF_NAME"
+            source="the pushed tag"
+          else
+            tag="$(tr -d '[:space:]' < "${PROJECT_DIR}/VERSION")"
+            source="${PROJECT_DIR}/VERSION"
+          fi
+
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$'; then
+            echo "::error::'$tag' (from $source) is not a version like v0.2.0."
+            exit 1
+          fi
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice::$tag is already released — nothing to do."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Releasing $tag, asked for by $source."
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Export and release
+    needs: decide
+    if: needs.decide.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The editor and the export templates are about a gigabyte between them, and
+      # neither changes unless GODOT_VERSION does.
+      - name: Cache the engine
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-bin
+            ~/.local/share/godot/export_templates
+          key: godot-export-${{ env.GODOT_VERSION }}-linux
+
+      - name: Fetch Godot and its templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          mkdir -p ~/godot-bin
+          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q -o /tmp/godot.zip -d ~/godot-bin
+          mv ~/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+
+          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p ~/.local/share/godot/export_templates
+          unzip -q -o /tmp/templates.tpz -d /tmp/tpl
+          mv /tmp/tpl/templates ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+
+      - name: Import
+        run: ~/godot-bin/godot --headless --path "${PROJECT_DIR}" --import 2>&1 | tee /tmp/import.log
+
+      - name: Fail on a parse error
+        run: |
+          if grep -qE "Parse Error|Compile Error|Failed to load script" /tmp/import.log; then
+            grep -E "Parse Error|Compile Error|Failed to load script" -A1 /tmp/import.log
+            exit 1
+          fi
+
+      # Shipping a build that fails its own checks would be a poor joke.
+      - name: Run the checks
+        run: |
+          set -euo pipefail
+          for suite in world physics rules input; do
+            ~/godot-bin/godot --headless --path "${PROJECT_DIR}" \
+              --script "res://tests/${suite}_test.gd"
+          done
+
+      - name: Export
+        run: |
+          set -euo pipefail
+          mkdir -p build/linux
+          ~/godot-bin/godot --headless --path "${PROJECT_DIR}" \
+            --export-release "Linux" ../build/linux/mine-and-craft.x86_64
+          chmod +x build/linux/mine-and-craft.x86_64
+          ls -la build/linux
+
+      - name: Check something actually came out
+        run: |
+          f=build/linux/mine-and-craft.x86_64
+          if [ ! -s "$f" ]; then
+            echo "::error::$f is missing or empty — the export produced nothing."
+            exit 1
+          fi
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          tar czf mine-and-craft-linux-x86_64.tar.gz -C build/linux mine-and-craft.x86_64
+          sha256sum mine-and-craft-linux-x86_64.tar.gz | tee SHA256SUMS
+
+      - name: Write the release notes
+        env:
+          TAG: ${{ needs.decide.outputs.tag }}
+        run: |
+          cat > /tmp/notes.md <<NOTES
+          Mine And Craft ${TAG}, built from ${GITHUB_SHA:0:7}.
+
+          | Platform | Download |
+          |---|---|
+          | Steam Machine, SteamOS, or any x86_64 Linux | \`mine-and-craft-linux-x86_64.tar.gz\` |
+
+          The archive holds one executable with the game embedded:
+
+          \`\`\`
+          tar xzf mine-and-craft-linux-x86_64.tar.gz
+          ./mine-and-craft.x86_64
+          \`\`\`
+
+          Built for a controller on a TV. The left stick walks, the right stick looks,
+          A jumps, the right trigger digs and the left places. Start pauses.
+          NOTES
+          cat /tmp/notes.md
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.decide.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            --title "Mine And Craft $TAG" \
+            --notes-file /tmp/notes.md \
+            --latest \
+            mine-and-craft-linux-x86_64.tar.gz \
+            SHA256SUMS
